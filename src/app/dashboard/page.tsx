@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { HealthData } from '@/lib/types';
 import { useAuth } from '@/providers/auth-provider';
@@ -10,6 +10,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { AddHealthDataDialog } from '@/components/dashboard/add-health-data-dialog';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { ProgressChart } from '@/components/dashboard/progress-chart';
+import { HealthSummary } from '@/components/dashboard/health-summary';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dumbbell, Heart, Scale, Thermometer, Droplets, Percent } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -40,6 +41,7 @@ export default function DashboardPage() {
   }, [user]);
 
   const latestData = healthData[0];
+  const previousData = healthData[1];
   const reversedData = [...healthData].reverse();
 
   const needsUpdate = () => {
@@ -67,6 +69,7 @@ export default function DashboardPage() {
 
       {loading ? (
         <div className="space-y-6">
+           <Skeleton className="h-40" />
            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
              <Skeleton className="h-24" />
              <Skeleton className="h-24" />
@@ -95,6 +98,7 @@ export default function DashboardPage() {
 
           {latestData ? (
             <>
+              {previousData && <HealthSummary latestData={latestData} previousData={previousData} />}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <MetricCard title="Weight" value={latestData.weight} unit="kg" icon={Scale} />
                 <MetricCard title="BMI" value={latestData.bmi} unit="" icon={Dumbbell} />
