@@ -20,5 +20,5 @@ export type HealthData = HealthDataEntry & {
   createdAt: {
     seconds: number;
     nanoseconds: number;
-  } | Date;
+  } | Date | string; // Allow string for serializability
 };

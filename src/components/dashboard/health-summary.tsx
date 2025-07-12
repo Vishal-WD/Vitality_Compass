@@ -23,7 +23,22 @@ export function HealthSummary({ latestData, previousData }: HealthSummaryProps) 
     const getSummary = async () => {
       setLoading(true);
       try {
-        const result = await generateHealthSummary({ latestData, previousData });
+        // Convert Firestore Timestamps to serializable strings before passing to the server function.
+        const toSerializable = (data: HealthData) => {
+          const createdAt = (data.createdAt as any)?.seconds
+            ? new Date((data.createdAt as any).seconds * 1000).toISOString()
+            : new Date(data.createdAt as any).toISOString();
+            
+          return {
+            ...data,
+            createdAt,
+          };
+        };
+
+        const result = await generateHealthSummary({ 
+          latestData: toSerializable(latestData), 
+          previousData: toSerializable(previousData) 
+        });
         setSummary(result);
       } catch (error) {
         console.error("Failed to generate health summary:", error);
