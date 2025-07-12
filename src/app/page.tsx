@@ -8,7 +8,7 @@ import Image from 'next/image';
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="container mx-auto px-4 py-6 flex justify-between items-center">
+      <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
         <Logo />
         <div className="flex items-center gap-2 sm:gap-4">
           <Button variant="ghost" asChild>
@@ -21,7 +21,7 @@ export default function LandingPage() {
       </header>
 
       <main className="flex-1">
-        <section className="container mx-auto px-4 text-center py-20 lg:py-32">
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 text-center py-20 lg:py-32">
            <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div className="text-left">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary">
@@ -39,8 +39,8 @@ export default function LandingPage() {
                 <div className="relative h-64 md:h-96">
                     <Image 
                         src="https://placehold.co/600x400.png" 
-                        alt="Health dashboard illustration"
-                        data-ai-hint="health fitness"
+                        alt="An anime-style illustration of a person energetically running through a park with health icons floating around."
+                        data-ai-hint="anime health"
                         fill
                         priority
                         className="object-cover rounded-lg shadow-lg"
@@ -51,7 +51,7 @@ export default function LandingPage() {
         </section>
 
         <section className="bg-white dark:bg-card py-20 lg:py-24">
-          <div className="container mx-auto px-4">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl font-bold text-center mb-12">Features to Guide You</h2>
             <div className="grid md:grid-cols-3 gap-8">
               <Card className="text-center flex flex-col">
@@ -98,7 +98,7 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="container mx-auto px-4 py-6 text-center text-muted-foreground">
+      <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} Vitality Compass. All rights reserved.</p>
       </footer>
     </div>
