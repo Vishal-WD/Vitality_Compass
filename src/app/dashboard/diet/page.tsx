@@ -118,6 +118,9 @@ export default function DietPage() {
       "Low": <TrendingDown className="h-5 w-5 text-blue-500" />,
       "Normal": <ShieldCheck className="h-5 w-5 text-green-500" />,
   }
+  
+  const suggestionCategories: SuggestionCategory[] = ['fruits', 'vegetables', 'proteins', 'seedsAndNuts'];
+
 
   const renderContent = () => {
     if (loading) {
@@ -180,7 +183,7 @@ export default function DietPage() {
                <p className="text-sm text-muted-foreground pt-4 leading-relaxed">{suggestions.summary}</p>
             </div>
             
-            {(Object.keys(categoryIcons) as SuggestionCategory[]).map(category => {
+            {suggestionCategories.map(category => {
                 const items = suggestions[category];
 
                 if (!items || items.length === 0) return null;
@@ -214,11 +217,13 @@ export default function DietPage() {
 
        <Card>
             <CardHeader>
-                <div>
-                  <CardTitle>Your Personalized Suggestions</CardTitle>
-                  <CardDescription>
-                  Here are the dietary recommendations from our AI assistant, based on your latest metrics.
-                  </CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Your Personalized Suggestions</CardTitle>
+                    <CardDescription>
+                    Here are the dietary recommendations from our AI assistant, based on your latest metrics.
+                    </CardDescription>
+                  </div>
                 </div>
             </CardHeader>
             <CardContent>
