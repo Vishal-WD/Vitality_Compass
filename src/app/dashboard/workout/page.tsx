@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, ReactNode } from 'react';
@@ -63,7 +64,10 @@ export default function WorkoutPage() {
           
           const latestData = querySnapshot.docs[0].data() as HealthData;
           
-          const result = await generateWorkoutSuggestions(latestData);
+          // Convert to a plain object before sending to the server function
+          const { createdAt, ...plainData } = latestData;
+          
+          const result = await generateWorkoutSuggestions(plainData);
           setSuggestions(result);
 
         } catch (err) {
