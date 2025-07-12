@@ -22,30 +22,19 @@ export default function LandingPage() {
 
       <main className="flex-1">
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 text-center py-20 lg:py-32">
-           <div className="grid md:grid-cols-2 gap-8 items-center">
-                <div className="text-left">
+           <div className="flex flex-col items-center">
+                <div className="text-center max-w-3xl">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary">
                         Navigate Your Health Journey
                     </h1>
-                    <p className="mt-4 max-w-2xl text-lg lg:text-xl text-muted-foreground">
+                    <p className="mt-4 max-w-2xl mx-auto text-lg lg:text-xl text-muted-foreground">
                         Vitality Compass is your personal health dashboard to track metrics, get AI-powered insights, and build a healthier lifestyle.
                     </p>
-                    <div className="mt-8 flex gap-4">
+                    <div className="mt-8 flex justify-center gap-4">
                         <Button size="lg" asChild>
                         <Link href="/signup">Get Started for Free</Link>
                         </Button>
                     </div>
-                </div>
-                <div className="relative h-64 md:h-96">
-                    <Image 
-                        src="https://placehold.co/600x400.png" 
-                        alt="An anime-style illustration of a person energetically running through a park with health icons floating around."
-                        data-ai-hint="anime health"
-                        fill
-                        priority
-                        className="object-cover rounded-lg shadow-lg"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
                 </div>
            </div>
         </section>
