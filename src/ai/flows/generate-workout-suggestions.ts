@@ -18,10 +18,20 @@ const WorkoutSuggestionsInputSchema = z.object({
 });
 export type WorkoutSuggestionsInput = z.infer<typeof WorkoutSuggestionsInputSchema>;
 
+const DailyPlanSchema = z.object({
+  day: z.string().describe('The day of the week (e.g., Monday, Tuesday).'),
+  title: z.string().describe('A catchy title for the day\'s workout (e.g., "Cardio Blast", "Strength & Core", "Rest & Recovery").'),
+  description: z.string().describe('A brief description of the workout for the day.'),
+  exercises: z.array(z.object({
+    name: z.string().describe('The name of the exercise (e.g., "Push-ups", "Running", "Yoga").'),
+    sets: z.string().describe('The number of sets (e.g., "3 sets").'),
+    reps: z.string().describe('The number of repetitions or duration (e.g., "10-12 reps", "30 minutes").'),
+    imageHint: z.string().describe('A one or two-word hint for a relevant image (e.g., "pushups", "running", "yoga", "weight lifting").')
+  })).describe("An array of exercises for the day. If it's a rest day, this array can be empty.")
+});
+
 const WorkoutSuggestionsOutputSchema = z.object({
-  suggestions: z
-    .string()
-    .describe('Workout suggestions tailored to the user based on their age, weight, and BMI.'),
+  weeklyPlan: z.array(DailyPlanSchema).describe("A 7-day workout plan tailored to the user.")
 });
 export type WorkoutSuggestionsOutput = z.infer<typeof WorkoutSuggestionsOutputSchema>;
 
@@ -35,13 +45,14 @@ const prompt = ai.definePrompt({
   name: 'workoutSuggestionsPrompt',
   input: {schema: WorkoutSuggestionsInputSchema},
   output: {schema: WorkoutSuggestionsOutputSchema},
-  prompt: `You are a personal trainer. Generate workout suggestions based on the user's age, weight, and BMI.
+  prompt: `You are a world-class personal trainer. Generate a comprehensive 7-day workout plan based on the user's age, weight, and BMI.
 
-Age: {{{age}}}
-Weight: {{{weight}}} kg
-BMI: {{{bmi}}}
+User Metrics:
+- Age: {{age}} years
+- Weight: {{weight}} kg
+- BMI: {{bmi}}
 
-Suggest workouts that are appropriate for their age, weight and BMI.`,
+Create a weekly plan that includes a mix of cardio, strength training, and at least one rest day. For each day, provide a title, a short description, and a list of specific exercises with sets and reps. For each exercise, provide a simple one or two-word 'imageHint' that can be used to find a representative photo.`,
 });
 
 const generateWorkoutSuggestionsFlow = ai.defineFlow(
