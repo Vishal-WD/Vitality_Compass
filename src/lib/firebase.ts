@@ -5,12 +5,13 @@ import { getFirestore } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyAOP9Q04fOzNOrzT1Tu24uB96m1zvbtdzc",
+  authDomain: "csp21-a0023.firebaseapp.com",
+  projectId: "csp21-a0023",
+  storageBucket: "csp21-a0023.appspot.com",
+  messagingSenderId: "228527630242",
+  appId: "1:228527630242:web:1811bf5b68c1d2ea4874fb",
+  measurementId: "G-R38L26WKVP"
 };
 
 // Log the config to the browser console to help with debugging.
