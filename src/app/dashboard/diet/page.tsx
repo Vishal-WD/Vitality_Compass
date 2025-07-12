@@ -1,21 +1,19 @@
 
 'use client';
 
-import { useState, useEffect, ReactNode, useRef } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { generateDietarySuggestions, GenerateDietarySuggestionsOutput, SuggestionItem } from '@/ai/flows/generate-dietary-suggestions';
 import { generateImage } from '@/ai/flows/generate-image';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
 import { HealthData } from '@/lib/types';
 import Link from 'next/link';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Apple, Carrot, Fish, Shell, Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown, Info, Download } from 'lucide-react';
+import { Apple, Carrot, Fish, Shell, Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown, Info } from 'lucide-react';
 import Image from 'next/image';
 
 type SuggestionCategory = 'fruits' | 'vegetables' | 'proteins' | 'seedsAndNuts';
@@ -60,11 +58,8 @@ async function processInBatches<T, R>(items: T[], processor: (item: T) => Promis
 export default function DietPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState(false);
   const [suggestions, setSuggestions] = useState<(Omit<GenerateDietarySuggestionsOutput, SuggestionCategory> & Record<SuggestionCategory, SuggestionItemWithImage[]>) | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const printableRef = useRef<HTMLDivElement>(null);
-
 
   useEffect(() => {
     if (user) {
@@ -74,30 +69,54 @@ export default function DietPage() {
         setSuggestions(null);
 
         try {
-          const q = query(
+          // 1. Fetch the latest health data to get its ID
+          const healthDataQuery = query(
             collection(db, 'healthData'),
             where('userId', '==', user.uid),
             orderBy('createdAt', 'desc'),
             limit(1)
           );
-          const querySnapshot = await getDocs(q);
+          const healthDataSnapshot = await getDocs(healthDataQuery);
 
-          if (querySnapshot.empty) {
+          if (healthDataSnapshot.empty) {
             setError("No health data found. Please add your data on the dashboard page first.");
             setLoading(false);
             return;
           }
           
-          const latestData = querySnapshot.docs[0].data() as HealthData;
-          const { createdAt, userId, ...plainData } = latestData;
+          const latestHealthDoc = healthDataSnapshot.docs[0];
+          const latestHealthData = { id: latestHealthDoc.id, ...latestHealthDoc.data() } as HealthData;
 
-          const textResult = await generateDietarySuggestions(plainData);
+          // 2. Check for a cached suggestion
+          const suggestionRef = doc(db, 'generatedSuggestions', `${user.uid}_${latestHealthData.id}_diet`);
+          const suggestionSnap = await getDoc(suggestionRef);
+
+          let finalSuggestions: GenerateDietarySuggestionsOutput;
+
+          if (suggestionSnap.exists()) {
+            // Use cached data
+            finalSuggestions = suggestionSnap.data().suggestionData;
+          } else {
+            // Generate new suggestions and cache them
+            const { createdAt, userId, id, ...plainData } = latestHealthData;
+            const generatedResult = await generateDietarySuggestions(plainData);
+            
+            await setDoc(suggestionRef, {
+              userId: user.uid,
+              healthDataId: latestHealthData.id,
+              type: 'diet',
+              suggestionData: generatedResult,
+              createdAt: serverTimestamp(),
+            });
+
+            finalSuggestions = generatedResult;
+          }
           
-          // Generate all images in batches to avoid rate limiting
+          // 3. Generate images for the suggestions
           const allItems: { item: SuggestionItem, category: SuggestionCategory }[] = [];
-          (Object.keys(textResult) as SuggestionCategory[]).forEach(key => {
-              if (Array.isArray(textResult[key])) {
-                  textResult[key].forEach(item => allItems.push({ item, category: key }));
+          (Object.keys(finalSuggestions) as SuggestionCategory[]).forEach(key => {
+              if (Array.isArray(finalSuggestions[key])) {
+                  finalSuggestions[key].forEach(item => allItems.push({ item, category: key }));
               }
           });
 
@@ -114,7 +133,7 @@ export default function DietPage() {
           const itemsWithImages = await processInBatches(allItems, imageProcessor, 5);
 
           const suggestionsWithImages = {
-              ...textResult,
+              ...finalSuggestions,
               fruits: itemsWithImages.filter((_, i) => allItems[i].category === 'fruits'),
               vegetables: itemsWithImages.filter((_, i) => allItems[i].category === 'vegetables'),
               proteins: itemsWithImages.filter((_, i) => allItems[i].category === 'proteins'),
@@ -134,30 +153,6 @@ export default function DietPage() {
         setLoading(false);
     }
   }, [user]);
-  
-  const handleDownload = async () => {
-    if (!printableRef.current) return;
-    setDownloading(true);
-    try {
-        const canvas = await html2canvas(printableRef.current, {
-            useCORS: true,
-            scale: 2,
-            backgroundColor: null,
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'px',
-            format: [canvas.width, canvas.height],
-        });
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-        pdf.save('VitalityCompass-DietPlan.pdf');
-    } catch(err) {
-        console.error("Failed to generate PDF:", err);
-    } finally {
-        setDownloading(false);
-    }
-  };
 
   const categoryIcons: Record<string, ReactNode> = {
     fruits: <Apple className="w-6 h-6 text-primary" />,
@@ -219,7 +214,7 @@ export default function DietPage() {
 
     if (suggestions) {
       return (
-        <div className="space-y-6" ref={printableRef}>
+        <div className="space-y-6">
             <div className="space-y-4 rounded-lg border p-4 bg-card">
                <h3 className="font-semibold text-lg">Analysis Summary</h3>
                <ul className="space-y-3">
@@ -273,17 +268,13 @@ export default function DietPage() {
       </div>
 
        <Card>
-            <CardHeader className="flex flex-row items-start justify-between">
+            <CardHeader>
                 <div>
                   <CardTitle>Your Personalized Suggestions</CardTitle>
                   <CardDescription>
                   Here are the dietary recommendations from our AI assistant, based on your latest metrics.
                   </CardDescription>
                 </div>
-                <Button variant="outline" onClick={handleDownload} disabled={loading || downloading || !suggestions}>
-                   <Download className="mr-2 h-4 w-4" />
-                   {downloading ? 'Downloading...' : 'Download'}
-                </Button>
             </CardHeader>
             <CardContent>
                 {renderContent()}

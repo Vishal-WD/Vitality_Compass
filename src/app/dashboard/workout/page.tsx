@@ -1,20 +1,18 @@
 
 'use client';
 
-import { useState, useEffect, ReactNode, useRef } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { generateWorkoutSuggestions, WorkoutSuggestionsOutput, Exercise } from '@/ai/flows/generate-workout-suggestions';
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
 import { HealthData } from '@/lib/types';
 import Link from 'next/link';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShieldCheck, ShieldAlert, TrendingDown, HeartPulse, Heart, Droplets, Thermometer, Percent, Info, Download } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, TrendingDown, HeartPulse, Heart, Droplets, Thermometer, Percent, Info } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const metricAnalysisIcons: Record<string, ReactNode> = {
@@ -50,11 +48,8 @@ const WorkoutExerciseCard = ({ exercise }: { exercise: Exercise }) => {
 export default function WorkoutPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [downloading, setDownloading] = useState(false);
   const [suggestions, setSuggestions] = useState<WorkoutSuggestionsOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const printableRef = useRef<HTMLDivElement>(null);
-
 
   useEffect(() => {
     if (user) {
@@ -64,27 +59,46 @@ export default function WorkoutPage() {
         setSuggestions(null);
 
         try {
-          const q = query(
+          // 1. Fetch the latest health data to get its ID
+          const healthDataQuery = query(
             collection(db, 'healthData'),
             where('userId', '==', user.uid),
             orderBy('createdAt', 'desc'),
             limit(1)
           );
-          const querySnapshot = await getDocs(q);
+          const healthDataSnapshot = await getDocs(healthDataQuery);
 
-          if (querySnapshot.empty) {
+          if (healthDataSnapshot.empty) {
             setError("No health data found. Please add your data on the dashboard page first.");
             setLoading(false);
             return;
           }
           
-          const latestData = querySnapshot.docs[0].data() as HealthData;
+          const latestHealthDoc = healthDataSnapshot.docs[0];
+          const latestHealthData = { id: latestHealthDoc.id, ...latestHealthDoc.data() } as HealthData;
           
-          const { createdAt, userId, ...plainData } = latestData;
-          
-          const textResult = await generateWorkoutSuggestions(plainData);
-          
-          setSuggestions(textResult);
+          // 2. Check for a cached suggestion
+          const suggestionRef = doc(db, 'generatedSuggestions', `${user.uid}_${latestHealthData.id}_workout`);
+          const suggestionSnap = await getDoc(suggestionRef);
+
+          if (suggestionSnap.exists()) {
+            // Use cached data
+            setSuggestions(suggestionSnap.data().suggestionData);
+          } else {
+            // Generate new suggestions and cache them
+            const { createdAt, userId, id, ...plainData } = latestHealthData;
+            const generatedResult = await generateWorkoutSuggestions(plainData);
+            
+            await setDoc(suggestionRef, {
+              userId: user.uid,
+              healthDataId: latestHealthData.id,
+              type: 'workout',
+              suggestionData: generatedResult,
+              createdAt: serverTimestamp(),
+            });
+
+            setSuggestions(generatedResult);
+          }
 
         } catch (err) {
           console.error('Failed to get suggestions:', err);
@@ -98,30 +112,6 @@ export default function WorkoutPage() {
         setLoading(false);
     }
   }, [user]);
-
-  const handleDownload = async () => {
-    if (!printableRef.current) return;
-    setDownloading(true);
-    try {
-        const canvas = await html2canvas(printableRef.current, {
-            useCORS: true,
-            scale: 2, 
-            backgroundColor: null, 
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'px',
-            format: [canvas.width, canvas.height],
-        });
-        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-        pdf.save('VitalityCompass-WorkoutPlan.pdf');
-    } catch(err) {
-        console.error("Failed to generate PDF:", err);
-    } finally {
-        setDownloading(false);
-    }
-  };
 
   const renderContent = () => {
       if (loading) {
@@ -150,7 +140,7 @@ export default function WorkoutPage() {
 
       if (suggestions) {
           return (
-              <div className="space-y-6" ref={printableRef}>
+              <div className="space-y-6">
                    {suggestions.analysis && (
                      <div className="space-y-4 rounded-lg border p-4 bg-card">
                        <h3 className="font-semibold text-lg">Analysis Summary</h3>
@@ -213,17 +203,13 @@ export default function WorkoutPage() {
       </div>
       
       <Card className="min-h-full">
-        <CardHeader className="flex flex-row items-start justify-between">
+        <CardHeader>
           <div>
             <CardTitle>Your Personalized Workout</CardTitle>
             <CardDescription>
               Here is the 7-day workout plan from our AI personal trainer, based on your latest metrics.
             </CardDescription>
           </div>
-           <Button variant="outline" onClick={handleDownload} disabled={loading || downloading || !suggestions}>
-              <Download className="mr-2 h-4 w-4" />
-              {downloading ? 'Downloading...' : 'Download'}
-           </Button>
         </CardHeader>
         <CardContent>
            {renderContent()}
