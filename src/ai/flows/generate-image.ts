@@ -35,7 +35,7 @@ const generateImageFlow = ai.defineFlow(
     },
     async (input) => {
         const stylePrompt = input.style === 'anime' 
-            ? `a dynamic, high-quality anime-style illustration of ${input.hint}, clean vibrant colors, digital painting`
+            ? `a dynamic, high-quality anime-style illustration of a person doing ${input.hint}, clean vibrant colors, digital painting`
             : `a high-quality, photorealistic image of ${input.hint}, on a clean, light gray background`;
 
         const { media } = await ai.generate({
