@@ -13,7 +13,7 @@ export const healthDataSchema = z.object({
 
 export type HealthDataEntry = z.infer<typeof healthDataSchema>;
 
-export type HealthData extends HealthDataEntry {
+export type HealthData = HealthDataEntry & {
   id: string;
   userId: string;
   createdAt: {

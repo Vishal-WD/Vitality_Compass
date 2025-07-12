@@ -8,7 +8,8 @@ import { AddHealthDataDialog } from '@/components/dashboard/add-health-data-dial
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { ProgressChart } from '@/components/dashboard/progress-chart';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Barbell, Heart, Scale, Thermometer, Droplets, Percent } from 'lucide-react';
+import { Dumbbell, Heart, Scale, Thermometer, Droplets, Percent } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 async function getHealthData(userId: string): Promise<HealthData[]> {
   const q = query(
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <MetricCard title="Weight" value={latestData.weight} unit="kg" icon={Scale} />
-            <MetricCard title="BMI" value={latestData.bmi} unit="" icon={Barbell} />
+            <MetricCard title="BMI" value={latestData.bmi} unit="" icon={Dumbbell} />
             <MetricCard title="Blood Pressure" value={latestData.bloodPressure} unit="" icon={Heart} />
             <MetricCard title="Cholesterol" value={latestData.cholesterol} unit="mg/dL" icon={Droplets} />
             <MetricCard title="Sugar" value={latestData.sugarLevels} unit="mg/dL" icon={Thermometer} />
