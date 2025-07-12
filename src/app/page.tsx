@@ -9,7 +9,7 @@ export default function LandingPage() {
     <div className="flex flex-col min-h-screen">
       <header className="container mx-auto px-4 py-6 flex justify-between items-center">
         <Logo />
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Button variant="ghost" asChild>
             <Link href="/login">Login</Link>
           </Button>
@@ -21,7 +21,7 @@ export default function LandingPage() {
 
       <main className="flex-1">
         <section className="container mx-auto px-4 text-center py-20 lg:py-32">
-          <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight text-primary">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-primary">
             Navigate Your Health Journey
           </h1>
           <p className="mt-4 max-w-2xl mx-auto text-lg lg:text-xl text-muted-foreground">
@@ -38,8 +38,8 @@ export default function LandingPage() {
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold text-center mb-12">Features to Guide You</h2>
             <div className="grid md:grid-cols-3 gap-8">
-              <Card className="text-center">
-                <CardHeader>
+              <Card className="text-center flex flex-col">
+                <CardHeader className="flex-1">
                   <div className="mx-auto bg-primary/10 text-primary p-3 rounded-full w-fit">
                     <HeartPulse className="h-8 w-8" />
                   </div>
@@ -51,8 +51,8 @@ export default function LandingPage() {
                   </CardDescription>
                 </CardContent>
               </Card>
-              <Card className="text-center">
-                <CardHeader>
+              <Card className="text-center flex flex-col">
+                <CardHeader className="flex-1">
                    <div className="mx-auto bg-primary/10 text-primary p-3 rounded-full w-fit">
                     <Salad className="h-8 w-8" />
                   </div>
@@ -64,8 +64,8 @@ export default function LandingPage() {
                   </CardDescription>
                 </CardContent>
               </Card>
-              <Card className="text-center">
-                <CardHeader>
+              <Card className="text-center flex flex-col">
+                <CardHeader className="flex-1">
                    <div className="mx-auto bg-primary/10 text-primary p-3 rounded-full w-fit">
                     <Dumbbell className="h-8 w-8" />
                   </div>

@@ -59,7 +59,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">Your personal health overview.</p>
@@ -70,7 +70,7 @@ export default function DashboardPage() {
       {loading ? (
         <div className="space-y-6">
            <Skeleton className="h-40" />
-           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+           <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
              <Skeleton className="h-24" />
              <Skeleton className="h-24" />
              <Skeleton className="h-24" />
@@ -78,7 +78,7 @@ export default function DashboardPage() {
              <Skeleton className="h-24" />
              <Skeleton className="h-24" />
            </div>
-           <div className="grid gap-4 md:grid-cols-2">
+           <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
              <Skeleton className="h-80" />
              <Skeleton className="h-80" />
              <Skeleton className="h-80" />
@@ -99,7 +99,7 @@ export default function DashboardPage() {
           {latestData ? (
             <>
               {previousData && <HealthSummary latestData={latestData} previousData={previousData} />}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
                 <MetricCard title="Weight" value={latestData.weight} unit="kg" icon={Scale} />
                 <MetricCard title="BMI" value={latestData.bmi} unit="" icon={Dumbbell} />
                 <MetricCard title="Blood Pressure" value={latestData.bloodPressure} unit="" icon={Heart} />
@@ -107,7 +107,7 @@ export default function DashboardPage() {
                 <MetricCard title="Sugar" value={latestData.sugarLevels} unit="mg/dL" icon={Thermometer} />
                 <MetricCard title="Body Fat" value={latestData.fats} unit="%" icon={Percent} />
               </div>
-              <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                  <ProgressChart data={reversedData} metric="weight" label="Weight" color="#3F51B5" />
                  <ProgressChart data={reversedData} metric="bmi" label="BMI" color="#4CAF50" />
                  <ProgressChart data={reversedData} metric="cholesterol" label="Cholesterol" color="#FFC107" />

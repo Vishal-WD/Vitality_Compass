@@ -11,14 +11,14 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown, Info } from 'lucide-react';
+import { Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown, Info, Apple, Carrot, Beef, Leaf } from 'lucide-react';
 
 const DietSuggestionCard = ({ item }: { item: SuggestionItem }) => {
     return (
-        <Card className="flex flex-col border-2 border-primary/20 bg-primary/5 hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="flex-1 flex flex-col items-center justify-start p-6 text-center">
-                <p className="font-bold text-xl text-primary/90">{item.name}</p>
-                <p className="text-sm text-muted-foreground mt-2 flex-grow">{item.reason}</p>
+        <Card className="flex flex-col border-2 border-primary/10 bg-primary/5 hover:shadow-md transition-shadow duration-300">
+            <CardContent className="flex-1 p-4">
+                <p className="font-semibold text-base text-primary/90">{item.name}</p>
+                <p className="text-sm text-muted-foreground mt-1">{item.reason}</p>
             </CardContent>
         </Card>
     );
@@ -108,8 +108,15 @@ export default function DietPage() {
       "Low": <TrendingDown className="h-5 w-5 text-blue-500" />,
       "Normal": <ShieldCheck className="h-5 w-5 text-green-500" />,
   }
+
+  const suggestionCategories = ['fruits', 'vegetables', 'proteins', 'seedsAndNuts'];
   
-  const suggestionCategories: (keyof GenerateDietarySuggestionsOutput)[] = ['fruits', 'vegetables', 'proteins', 'seedsAndNuts'];
+  const categoryIcons: Record<string, ReactNode> = {
+    fruits: <Apple className="h-6 w-6 text-primary" />,
+    vegetables: <Carrot className="h-6 w-6 text-primary" />,
+    proteins: <Beef className="h-6 w-6 text-primary" />,
+    seedsAndNuts: <Leaf className="h-6 w-6 text-primary" />,
+  };
 
 
   const renderContent = () => {
@@ -122,13 +129,13 @@ export default function DietPage() {
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-2/3" />
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(12)].map((_, i) => (
-                    <div key={i} className="flex flex-col gap-4 p-6 rounded-lg border">
-                        <Skeleton className="h-12 w-3/4 mx-auto" />
-                        <div className="space-y-3 flex-1 text-center">
-                            <Skeleton className="h-5 w-full mx-auto" />
-                            <Skeleton className="h-5 w-5/6 mx-auto" />
+                    <div key={i} className="flex flex-col gap-4 p-4 rounded-lg border">
+                        <Skeleton className="h-6 w-1/2" />
+                        <div className="space-y-2 flex-1">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-5/6" />
                         </div>
                     </div>
                 ))}
@@ -139,7 +146,7 @@ export default function DietPage() {
     
     if (error) {
        return (
-         <Card className="text-center py-12">
+         <Card className="text-center py-12 px-4">
             <Info className="mx-auto h-12 w-12 text-destructive" />
             <h3 className="text-xl font-semibold mt-4">Unable to Generate Suggestions</h3>
             <p className="text-muted-foreground mt-2 max-w-md mx-auto">{error}</p>
@@ -153,16 +160,16 @@ export default function DietPage() {
     if (suggestions) {
       return (
         <div className="space-y-8" id="suggestions-content">
-            <div className="space-y-4 rounded-xl border p-6 bg-card shadow-sm">
-               <h3 className="font-bold text-2xl text-primary/90">Analysis Summary</h3>
-               <ul className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+            <div className="space-y-4 rounded-xl border p-4 sm:p-6 bg-card shadow-sm">
+               <h3 className="font-bold text-xl sm:text-2xl text-primary/90">Analysis Summary</h3>
+               <ul className="grid md:grid-cols-2 gap-x-6 gap-y-4">
                    {suggestions.analysis?.map(item => (
-                       <li key={item.metric} className="flex items-center gap-4">
-                            <div className="p-2 bg-primary/10 rounded-full">
+                       <li key={item.metric} className="flex items-start gap-3">
+                            <div className="p-2 bg-primary/10 rounded-full mt-1">
                                {metricAnalysisIcons[item.metric]}
                             </div>
                            <div className="flex-1">
-                               <span className="font-semibold text-lg">{item.metric}: <span className="font-bold">{item.status}</span></span>
+                               <span className="font-semibold text-base sm:text-lg">{item.metric}: <span className="font-bold">{item.status}</span></span>
                                <p className="text-sm text-muted-foreground">{item.comment}</p>
                            </div>
                            {statusIcons[item.status]}
@@ -173,16 +180,19 @@ export default function DietPage() {
             </div>
             
             {suggestionCategories.map(category => {
-                const items = suggestions[category] as SuggestionItem[] | undefined;
+                const items = suggestions[category as keyof typeof suggestions] as SuggestionItem[] | undefined;
 
                 if (!items || items.length === 0) return null;
+                const title = category.replace(/([A-Z])/g, ' $1');
+
 
                 return (
                 <div key={category}>
-                    <div className="flex items-center gap-4 mb-4">
-                        <h3 className="text-2xl font-bold capitalize text-primary/90">{category.replace(/([A-Z])/g, ' $1')}</h3>
+                    <div className="flex items-center gap-3 mb-4">
+                        {categoryIcons[category]}
+                        <h3 className="text-xl sm:text-2xl font-bold capitalize text-primary/90">{title}</h3>
                     </div>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((item, index) => (
                         <DietSuggestionCard key={`${category}-${index}`} item={item} />
                     ))}
