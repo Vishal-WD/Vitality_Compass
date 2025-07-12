@@ -99,7 +99,7 @@ export default function DietPage() {
     }
   }, [user]);
 
-  const categoryIcons: Record<string, ReactNode> = {
+  const categoryIcons: Record<SuggestionCategory, ReactNode> = {
     fruits: <Apple className="w-8 h-8 text-primary" />,
     vegetables: <Carrot className="w-8 h-8 text-primary" />,
     proteins: <Fish className="w-8 h-8 text-primary" />,
@@ -180,8 +180,7 @@ export default function DietPage() {
                <p className="text-sm text-muted-foreground pt-4 leading-relaxed">{suggestions.summary}</p>
             </div>
             
-            {Object.keys(categoryIcons).map(key => {
-                const category = key as SuggestionCategory;
+            {(Object.keys(categoryIcons) as SuggestionCategory[]).map(category => {
                 const items = suggestions[category];
 
                 if (!items || items.length === 0) return null;
