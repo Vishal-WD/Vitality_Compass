@@ -3,6 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { generateDietarySuggestions, GenerateDietarySuggestionsInput, GenerateDietarySuggestionsOutput } from '@/ai/flows/generate-dietary-suggestions';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -18,36 +19,7 @@ import { Loader2, Apple, Carrot, Fish, Shell, Heart, Droplets, Thermometer, Perc
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 
-const formSchema = baseSchema.pick({
-    height: true,
-    weight: true,
-    age: true,
-    bloodPressure: true,
-    cholesterol: true,
-    sugarLevels: true,
-    fats: true,
-    bloodPoints: true,
-});
-
-const categoryIcons: Record<string, ReactNode> = {
-  fruits: <Apple className="w-6 h-6 text-primary" />,
-  vegetables: <Carrot className="w-6 h-6 text-primary" />,
-  proteins: <Fish className="w-6 h-6 text-primary" />,
-  seedsAndNuts: <Shell className="w-6 h-6 text-primary" />,
-};
-
-const metricAnalysisIcons: Record<string, ReactNode> = {
-    "Blood Pressure": <Heart className="h-5 w-5 text-muted-foreground" />,
-    "Cholesterol": <Droplets className="h-5 w-5 text-muted-foreground" />,
-    "Sugar Levels": <Thermometer className="h-5 w-5 text-muted-foreground" />,
-    "Fats": <Percent className="h-5 w-5 text-muted-foreground" />,
-}
-
-const statusIcons: Record<string, ReactNode> = {
-    "High": <ShieldAlert className="h-5 w-5 text-red-500" />,
-    "Low": <TrendingDown className="h-5 w-5 text-blue-500" />,
-    "Normal": <ShieldCheck className="h-5 w-5 text-green-500" />,
-}
+const dietInputSchema = baseSchema;
 
 type SuggestionCategory = 'fruits' | 'vegetables' | 'proteins' | 'seedsAndNuts';
 
@@ -57,8 +29,8 @@ export default function DietPage() {
   const [suggestions, setSuggestions] = useState<GenerateDietarySuggestionsOutput | null>(null);
   const [isFetchingData, setIsFetchingData] = useState(true);
 
-  const form = useForm<GenerateDietarySuggestionsInput>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof dietInputSchema>>({
+    resolver: zodResolver(dietInputSchema),
   });
 
   useEffect(() => {
@@ -82,16 +54,41 @@ export default function DietPage() {
     }
   }, [user, form]);
 
-  async function onSubmit(values: GenerateDietarySuggestionsInput) {
+  async function onSubmit(values: z.infer<typeof dietInputSchema>) {
     setLoading(true);
     setSuggestions(null);
     try {
-      const result = await generateDietarySuggestions(values);
+      const bmi = parseFloat((values.weight / ((values.height / 100) ** 2)).toFixed(2));
+      const validatedInput = dietInputSchema.parse({ ...values, bmi: isNaN(bmi) ? 0 : bmi, });
+      const result = await generateDietarySuggestions(validatedInput);
       setSuggestions(result);
     } catch (error) {
       console.error('Failed to get suggestions:', error);
+      if (error instanceof z.ZodError) {
+        console.error("Zod validation error:", error.errors);
+      }
     }
     setLoading(false);
+  }
+  
+  const categoryIcons: Record<string, ReactNode> = {
+    fruits: <Apple className="w-6 h-6 text-primary" />,
+    vegetables: <Carrot className="w-6 h-6 text-primary" />,
+    proteins: <Fish className="w-6 h-6 text-primary" />,
+    seedsAndNuts: <Shell className="w-6 h-6 text-primary" />,
+  };
+  
+  const metricAnalysisIcons: Record<string, ReactNode> = {
+      "Blood Pressure": <Heart className="h-5 w-5 text-muted-foreground" />,
+      "Cholesterol": <Droplets className="h-5 w-5 text-muted-foreground" />,
+      "Sugar Levels": <Thermometer className="h-5 w-5 text-muted-foreground" />,
+      "Fats": <Percent className="h-5 w-5 text-muted-foreground" />,
+  }
+  
+  const statusIcons: Record<string, ReactNode> = {
+      "High": <ShieldAlert className="h-5 w-5 text-red-500" />,
+      "Low": <TrendingDown className="h-5 w-5 text-blue-500" />,
+      "Normal": <ShieldCheck className="h-5 w-5 text-green-500" />,
   }
 
   return (
@@ -195,7 +192,7 @@ export default function DietPage() {
                                         <h3 className="text-xl font-semibold capitalize">{category.replace(/([A-Z])/g, ' $1')}</h3>
                                     </div>
                                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {suggestions[category]?.map((item, index) => (
+                                    {(suggestions[category] as any)?.map((item: any, index: number) => (
                                         <Card key={index}>
                                             <CardContent className="p-0">
                                                 <Image

@@ -16,6 +16,7 @@ const GenerateDietarySuggestionsInputSchema = z.object({
   height: z.number().describe('The height of the user in centimeters.'),
   weight: z.number().describe('The weight of the user in kilograms.'),
   age: z.number().describe('The age of the user in years.'),
+  bmi: z.number().describe('The BMI (Body Mass Index) of the user.'),
   bloodPressure: z.string().describe('The blood pressure of the user, e.g., 120/80.'),
   cholesterol: z.number().describe('The cholesterol level of the user in mg/dL.'),
   sugarLevels: z.number().describe('The blood sugar levels of the user in mg/dL.'),
@@ -81,6 +82,7 @@ Health Metrics:
 - Height: {{height}} cm
 - Weight: {{weight}} kg
 - Age: {{age}} years
+- BMI: {{bmi}}
 - Blood Pressure: {{bloodPressure}}
 - Cholesterol: {{cholesterol}} mg/dL
 - Sugar Levels: {{sugarLevels}} mg/dL
