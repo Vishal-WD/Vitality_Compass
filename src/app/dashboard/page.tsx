@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -39,6 +40,7 @@ export default function DashboardPage() {
   }, [user]);
 
   const latestData = healthData[0];
+  const reversedData = [...healthData].reverse();
 
   const needsUpdate = () => {
     if (!latestData || !latestData.createdAt) return true;
@@ -73,7 +75,12 @@ export default function DashboardPage() {
              <Skeleton className="h-24" />
              <Skeleton className="h-24" />
            </div>
-           <Skeleton className="h-80" />
+           <div className="grid gap-4 md:grid-cols-2">
+             <Skeleton className="h-80" />
+             <Skeleton className="h-80" />
+             <Skeleton className="h-80" />
+             <Skeleton className="h-80" />
+           </div>
         </div>
       ) : (
         <>
@@ -96,8 +103,13 @@ export default function DashboardPage() {
                 <MetricCard title="Sugar" value={latestData.sugarLevels} unit="mg/dL" icon={Thermometer} />
                 <MetricCard title="Body Fat" value={latestData.fats} unit="%" icon={Percent} />
               </div>
-              <div className="grid gap-4 md:grid-cols-1">
-                 <ProgressChart data={[...healthData].reverse()} metric="weight" label="Weight" color="#3F51B5" />
+              <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+                 <ProgressChart data={reversedData} metric="weight" label="Weight" color="#3F51B5" />
+                 <ProgressChart data={reversedData} metric="bmi" label="BMI" color="#4CAF50" />
+                 <ProgressChart data={reversedData} metric="cholesterol" label="Cholesterol" color="#FFC107" />
+                 <ProgressChart data={reversedData} metric="sugarLevels" label="Sugar Levels" color="#E91E63" />
+                 <ProgressChart data={reversedData} metric="fats" label="Body Fat" color="#9C27B0" />
+                 <ProgressChart data={reversedData} metric="bloodPressure" label="Blood Pressure" color="#F44336" />
               </div>
             </>
           ) : (
