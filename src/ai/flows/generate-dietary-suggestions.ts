@@ -27,10 +27,18 @@ export type GenerateDietarySuggestionsInput = z.infer<
   typeof GenerateDietarySuggestionsInputSchema
 >;
 
+const SuggestionItemSchema = z.object({
+  name: z.string().describe("Name of the food item."),
+  reason: z.string().describe("A brief, one-sentence reason why this food is suggested for the user."),
+  imageHint: z.string().describe("A one or two-word hint for a relevant image (e.g., 'apple', 'spinach', 'chia seeds').")
+});
+
 const GenerateDietarySuggestionsOutputSchema = z.object({
-  dietarySuggestions: z
-    .string()
-    .describe('Dietary suggestions based on the provided health metrics.'),
+    summary: z.string().describe("A brief, encouraging one or two-sentence summary of the dietary advice."),
+    fruits: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended fruits."),
+    vegetables: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended vegetables."),
+    proteins: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended lean proteins."),
+    seedsAndNuts: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended seeds and nuts."),
 });
 
 export type GenerateDietarySuggestionsOutput = z.infer<
@@ -47,7 +55,9 @@ const prompt = ai.definePrompt({
   name: 'generateDietarySuggestionsPrompt',
   input: {schema: GenerateDietarySuggestionsInputSchema},
   output: {schema: GenerateDietarySuggestionsOutputSchema},
-  prompt: `You are a registered dietician. Based on the following health metrics, provide dietary suggestions to improve the user's health. Be concise and specific.
+  prompt: `You are a registered dietician. Based on the following health metrics, provide dietary suggestions to improve the user's health. 
+  
+  Your response must be structured. Provide a brief summary, then list exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts. For each item, give its name, a short reason for its recommendation, and a simple image hint.
 
 Health Metrics:
 - Height: {{height}} cm
@@ -59,7 +69,7 @@ Health Metrics:
 - Fats: {{fats}}%
 - Blood Points: {{bloodPoints}}
 
-Dietary Suggestions:`,
+Provide your structured dietary suggestions.`,
 });
 
 const generateDietarySuggestionsFlow = ai.defineFlow(
