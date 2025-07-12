@@ -8,7 +8,7 @@ import { generateWorkoutSuggestions, WorkoutSuggestionsInput, WorkoutSuggestions
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
-import { HealthData } from '@/lib/types';
+import { HealthData, healthDataSchema as baseSchema } from '@/lib/types';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
@@ -16,27 +16,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, ShieldCheck, ShieldAlert, TrendingDown, HeartPulse } from 'lucide-react';
+import { Loader2, ShieldCheck, ShieldAlert, TrendingDown, HeartPulse, Heart, Droplets, Thermometer, Percent } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-const formSchema = z.object({
-  age: z.coerce.number().positive("Age is required."),
-  weight: z.coerce.number().positive("Weight is required."),
-  bmi: z.coerce.number().positive("BMI is required."),
-  height: z.coerce.number().positive("Height is required.")
+const formSchema = baseSchema.pick({
+    height: true,
+    weight: true,
+    age: true,
+    bloodPressure: true,
+    cholesterol: true,
+    sugarLevels: true,
+    fats: true,
+    bloodPoints: true,
 });
 
 // We only need a subset for the AI, BMI is calculated from height and weight.
-const workoutInputSchema = z.object({
-  age: z.coerce.number().positive(),
-  weight: z.coerce.number().positive(),
-  bmi: z.coerce.number().positive(),
-});
+const workoutInputSchema = baseSchema;
+
+
+const metricAnalysisIcons: Record<string, ReactNode> = {
+    "BMI": <HeartPulse className="h-5 w-5 text-muted-foreground" />,
+    "Blood Pressure": <Heart className="h-5 w-5 text-muted-foreground" />,
+    "Cholesterol": <Droplets className="h-5 w-5 text-muted-foreground" />,
+    "Sugar Levels": <Thermometer className="h-5 w-5 text-muted-foreground" />,
+    "Fats": <Percent className="h-5 w-5 text-muted-foreground" />,
+}
 
 const statusIcons: Record<string, ReactNode> = {
+    "High": <ShieldAlert className="h-5 w-5 text-red-500" />,
     "Overweight": <ShieldAlert className="h-5 w-5 text-red-500" />,
     "Obese": <ShieldAlert className="h-5 w-5 text-red-500" />,
+    "Low": <TrendingDown className="h-5 w-5 text-blue-500" />,
     "Underweight": <TrendingDown className="h-5 w-5 text-blue-500" />,
+    "Normal": <ShieldCheck className="h-5 w-5 text-green-500" />,
     "Healthy": <ShieldCheck className="h-5 w-5 text-green-500" />,
 }
 
@@ -48,12 +61,6 @@ export default function WorkoutPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      age: 0,
-      weight: 0,
-      bmi: 0,
-      height: 0,
-    }
   });
 
   useEffect(() => {
@@ -69,12 +76,7 @@ export default function WorkoutPage() {
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
           const latestData = querySnapshot.docs[0].data() as HealthData;
-          form.reset({
-            age: latestData.age,
-            weight: latestData.weight,
-            bmi: latestData.bmi,
-            height: latestData.height,
-          });
+          form.reset(latestData);
         }
         setIsFetchingData(false);
       };
@@ -83,26 +85,13 @@ export default function WorkoutPage() {
         setIsFetchingData(false);
     }
   }, [user, form]);
-  
-  // Watch height and weight to recalculate BMI
-  const height = form.watch('height');
-  const weight = form.watch('weight');
-
-  useEffect(() => {
-    if (height > 0 && weight > 0) {
-      const bmi = parseFloat((weight / ((height / 100) ** 2)).toFixed(2));
-      if (!isNaN(bmi)) {
-        form.setValue('bmi', bmi, { shouldValidate: true });
-      }
-    }
-  }, [height, weight, form]);
-
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     setSuggestions(null);
     try {
-      const validatedInput = workoutInputSchema.parse(values);
+      const bmi = parseFloat((values.weight / ((values.height / 100) ** 2)).toFixed(2));
+      const validatedInput = workoutInputSchema.parse({ ...values, bmi: isNaN(bmi) ? 0 : bmi, });
       const result = await generateWorkoutSuggestions(validatedInput);
       setSuggestions(result);
     } catch (error) {
@@ -118,14 +107,14 @@ export default function WorkoutPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">AI Workout Plans</h1>
-        <p className="text-muted-foreground">Get weekly workout plans tailored to your age, weight, and BMI.</p>
+        <p className="text-muted-foreground">Get weekly workout plans tailored to your complete health profile.</p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8 items-start">
         <div className="lg:col-span-1 lg:sticky top-6">
           <Card>
             <CardHeader>
-              <CardTitle>Your Metrics</CardTitle>
+              <CardTitle>Your Health Metrics</CardTitle>
               <CardDescription>
                 We've pre-filled your latest data. Adjust if needed.
               </CardDescription>
@@ -139,12 +128,20 @@ export default function WorkoutPage() {
                   </div>
               ) : (
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField control={form.control} name="age" render={({ field }) => (<FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="height" render={({ field }) => (<FormItem><FormLabel>Height (cm)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="weight" render={({ field }) => (<FormItem><FormLabel>Weight (kg)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="bmi" render={({ field }) => (<FormItem><FormLabel>BMI (auto-calculated)</FormLabel><FormControl><Input type="number" {...field} readOnly className="bg-muted" /></FormControl><FormMessage /></FormItem>)} />
-                  <Button type="submit" className="w-full" disabled={loading}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                   <ScrollArea className="h-96 pr-6">
+                      <div className="space-y-4 py-4">
+                          <FormField control={form.control} name="height" render={({ field }) => (<FormItem><FormLabel>Height (cm)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={form.control} name="weight" render={({ field }) => (<FormItem><FormLabel>Weight (kg)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={form.control} name="age" render={({ field }) => (<FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={form.control} name="bloodPressure" render={({ field }) => (<FormItem><FormLabel>Blood Pressure</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={form.control} name="cholesterol" render={({ field }) => (<FormItem><FormLabel>Cholesterol</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={form.control} name="sugarLevels" render={({ field }) => (<FormItem><FormLabel>Sugar Levels</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={form.control} name="fats" render={({ field }) => (<FormItem><FormLabel>Fats (%)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                          <FormField control={form.control} name="bloodPoints" render={({ field }) => (<FormItem><FormLabel>Blood Points</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      </div>
+                  </ScrollArea>
+                  <Button type="submit" className="w-full mt-4" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {loading ? 'Generating...' : 'Generate Workout Plan'}
                   </Button>
@@ -177,18 +174,23 @@ export default function WorkoutPage() {
                 <div className="space-y-6">
                    {suggestions.analysis && (
                      <div className="space-y-4 rounded-lg border p-4">
-                         <h3 className="font-semibold text-lg">Analysis Summary</h3>
-                         <div className="flex items-start gap-3">
-                            <div className="flex items-center gap-2 pt-1">
-                                <HeartPulse className="h-5 w-5 text-muted-foreground" />
-                                {statusIcons[suggestions.analysis.bmiStatus]}
-                            </div>
-                            <div>
-                                <span className="font-semibold">BMI Status: {suggestions.analysis.bmiStatus}</span>
-                                <p className="text-sm text-muted-foreground">{suggestions.analysis.comment}</p>
-                            </div>
-                        </div>
-                     </div>
+                       <h3 className="font-semibold text-lg">Analysis Summary</h3>
+                       <ul className="space-y-3">
+                           {suggestions.analysis?.map(item => (
+                               <li key={item.metric} className="flex items-start gap-3">
+                                    <div className="flex items-center gap-2 pt-1">
+                                       {metricAnalysisIcons[item.metric]}
+                                       {statusIcons[item.status]}
+                                    </div>
+                                   <div>
+                                       <span className="font-semibold">{item.metric}: {item.status}</span>
+                                       <p className="text-sm text-muted-foreground">{item.comment}</p>
+                                   </div>
+                               </li>
+                           ))}
+                       </ul>
+                       <p className="text-sm text-muted-foreground pt-2">{suggestions.summary}</p>
+                    </div>
                    )}
 
                   {suggestions.weeklyPlan && (
