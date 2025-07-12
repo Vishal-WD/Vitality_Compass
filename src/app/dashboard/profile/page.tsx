@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider, linkWithCredential, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider, linkWithCredential } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { useState } from 'react';
@@ -52,7 +52,7 @@ export default function ProfilePage() {
     setLoading(true);
 
     if (!user || !user.email) {
-        toast({ variant: "destructive", title: "Not authenticated with an email" });
+        toast({ variant: "destructive", title: "Error", description: "Not authenticated with an email account." });
         setLoading(false);
         return;
     }
@@ -113,7 +113,7 @@ export default function ProfilePage() {
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={user.isAnonymous ? 'Anonymous User' : (user.email || '')} disabled />
+            <Input id="email" type="email" value={user.isAnonymous ? 'Anonymous User (Guest)' : (user.email || '')} disabled />
           </div>
         </CardContent>
       </Card>
@@ -122,7 +122,7 @@ export default function ProfilePage() {
         <Card>
             <CardHeader>
                 <CardTitle>Upgrade Your Account</CardTitle>
-                <CardDescription>Add an email and password to save your progress.</CardDescription>
+                <CardDescription>Add an email and password to save your progress and access all features.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...linkAccountForm}>
@@ -168,4 +168,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

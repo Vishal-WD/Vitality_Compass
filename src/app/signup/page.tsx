@@ -45,7 +45,8 @@ export default function SignupPage() {
         title: 'Sign Up Failed',
         description: error.message || 'An unexpected error occurred. Please try again.',
       });
-      setIsSubmitting(false);
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
@@ -70,6 +71,7 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubmitting}
               />
             </div>
             <div>
@@ -80,6 +82,7 @@ export default function SignupPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isSubmitting}
               />
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
