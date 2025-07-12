@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -37,10 +38,10 @@ interface AppSidebarProps {
   user: User;
 }
 
-const navItems = [
+export const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/diet', label: 'Diet Suggestions', icon: Salad },
-  { href: '/dashboard/workout', label: 'Workout Plans', icon: Dumbbell },
+  { href: '/dashboard/diet', label: 'Diet', icon: Salad },
+  { href: '/dashboard/workout', label: 'Workout', icon: Dumbbell },
   { href: '/dashboard/profile', label: 'Profile', icon: UserIcon },
 ];
 
@@ -54,12 +55,14 @@ export function AppSidebar({ user }: AppSidebarProps) {
   };
 
   const getInitials = (email: string | null) => {
-    return email ? email.charAt(0).toUpperCase() : 'U';
+    if (!email) return 'G';
+    if (user.isAnonymous) return 'G';
+    return email.charAt(0).toUpperCase();
   };
 
   return (
-    <Sidebar>
-       <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+    <Sidebar className="hidden md:flex">
+      <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
       <SidebarHeader>
         <Logo />
       </SidebarHeader>
@@ -89,7 +92,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                   <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
                 </Avatar>
                 <div className="text-left overflow-hidden">
-                  <p className="font-medium text-sm truncate">{user.displayName || user.email}</p>
+                  <p className="font-medium text-sm truncate">{user.isAnonymous ? 'Guest User' : user.email}</p>
                 </div>
               </div>
             </Button>
