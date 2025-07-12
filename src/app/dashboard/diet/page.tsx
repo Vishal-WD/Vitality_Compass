@@ -8,11 +8,6 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
 import { HealthData } from '@/lib/types';
 import Link from 'next/link';
-import { Download } from 'lucide-react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,7 +28,6 @@ const DietSuggestionCard = ({ item }: { item: SuggestionItem }) => {
 };
 
 export default function DietPage() {
-  'use client';
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<GenerateDietarySuggestionsOutput | null>(null);
@@ -104,42 +98,6 @@ export default function DietPage() {
         setLoading(false);
     }
   }, [user]);
-  
-  const handleDownload = () => {
-    const input = document.getElementById('suggestions-content');
-    if (!input) return;
-
-    html2canvas(input, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: window.getComputedStyle(document.body).backgroundColor,
-    }).then((canvas) => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-      const ratio = canvasWidth / canvasHeight;
-      const width = pdfWidth;
-      const height = width / ratio;
-
-      let position = 0;
-      let heightLeft = height;
-
-      pdf.addImage(imgData, 'PNG', 0, position, width, height);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - height;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, width, height);
-        heightLeft -= pdfHeight;
-      }
-      
-      pdf.save(`diet-suggestions-${new Date().toISOString().slice(0, 10)}.pdf`);
-    });
-  };
 
   const categoryIcons: Record<string, ReactNode> = {
     fruits: <Apple className="w-8 h-8 text-primary" />,
@@ -256,17 +214,13 @@ export default function DietPage() {
       </div>
 
        <Card>
-            <CardHeader className="flex flex-row justify-between items-start">
+            <CardHeader>
                 <div>
                   <CardTitle>Your Personalized Suggestions</CardTitle>
                   <CardDescription>
                   Here are the dietary recommendations from our AI assistant, based on your latest metrics.
                   </CardDescription>
                 </div>
-                <Button variant="outline" onClick={handleDownload} disabled={loading || !suggestions || !!error}>
-                    <Download className="mr-2 h-4 w-4"/>
-                    Download
-                </Button>
             </CardHeader>
             <CardContent>
                 {renderContent()}
