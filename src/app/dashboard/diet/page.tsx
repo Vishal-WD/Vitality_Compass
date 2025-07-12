@@ -20,40 +20,22 @@ import Image from 'next/image';
 
 type SuggestionCategory = 'fruits' | 'vegetables' | 'proteins' | 'seedsAndNuts';
 
-const DietSuggestionCard = ({ item }: { item: SuggestionItem }) => {
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+interface SuggestionItemWithImage extends SuggestionItem {
+    imageUrl: string;
+}
 
-    useEffect(() => {
-        const fetchImage = async () => {
-            try {
-                const result = await generateImage({ hint: item.imageHint });
-                setImageUrl(result.imageUrl);
-            } catch (error) {
-                console.error("Failed to generate image:", error);
-                // Fallback to placeholder if generation fails
-                setImageUrl(`https://placehold.co/400x300.png`);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchImage();
-    }, [item.imageHint]);
-
+const DietSuggestionCard = ({ item }: { item: SuggestionItemWithImage }) => {
     return (
         <Card>
             <CardContent className="p-0">
-                {loading ? (
-                    <Skeleton className="h-full w-full rounded-t-lg aspect-[4/3]" />
-                ) : (
-                    <Image
-                        src={imageUrl || `https://placehold.co/400x300.png`}
-                        alt={item.name}
-                        width={400}
-                        height={300}
-                        className="rounded-t-lg object-cover aspect-[4/3]"
-                    />
-                )}
+                <Image
+                    src={item.imageUrl}
+                    alt={item.name}
+                    width={400}
+                    height={300}
+                    className="rounded-t-lg object-cover aspect-[4/3]"
+                    data-ai-hint={item.imageHint}
+                />
                 <div className="p-4">
                     <p className="font-semibold">{item.name}</p>
                     <p className="text-sm text-muted-foreground mt-1">{item.reason}</p>
@@ -68,7 +50,7 @@ export default function DietPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [suggestions, setSuggestions] = useState<GenerateDietarySuggestionsOutput | null>(null);
+  const [suggestions, setSuggestions] = useState<(Omit<GenerateDietarySuggestionsOutput, SuggestionCategory> & Record<SuggestionCategory, SuggestionItemWithImage[]>) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const printableRef = useRef<HTMLDivElement>(null);
 
@@ -81,7 +63,6 @@ export default function DietPage() {
         setSuggestions(null);
 
         try {
-          // 1. Fetch latest health data
           const q = query(
             collection(db, 'healthData'),
             where('userId', '==', user.uid),
@@ -97,13 +78,39 @@ export default function DietPage() {
           }
           
           const latestData = querySnapshot.docs[0].data() as HealthData;
-          
-          // Remove non-serializable fields before passing to the server function.
           const { createdAt, userId, ...plainData } = latestData;
 
-          // 2. Generate suggestions
-          const result = await generateDietarySuggestions(plainData);
-          setSuggestions(result);
+          const textResult = await generateDietarySuggestions(plainData);
+          
+          // Generate all images in parallel
+          const allItems: { item: SuggestionItem, category: SuggestionCategory }[] = [];
+          (Object.keys(textResult) as SuggestionCategory[]).forEach(key => {
+              if (Array.isArray(textResult[key])) {
+                  textResult[key].forEach(item => allItems.push({ item, category: key }));
+              }
+          });
+
+          const imagePromises = allItems.map(async ({item}) => {
+             try {
+                const result = await generateImage({ hint: item.imageHint });
+                return { ...item, imageUrl: result.imageUrl };
+             } catch(e) {
+                console.error("Image generation failed for:", item.imageHint, e);
+                return { ...item, imageUrl: `https://placehold.co/400x300.png`};
+             }
+          });
+          
+          const itemsWithImages = await Promise.all(imagePromises);
+
+          const suggestionsWithImages = {
+              ...textResult,
+              fruits: itemsWithImages.filter((_, i) => allItems[i].category === 'fruits'),
+              vegetables: itemsWithImages.filter((_, i) => allItems[i].category === 'vegetables'),
+              proteins: itemsWithImages.filter((_, i) => allItems[i].category === 'proteins'),
+              seedsAndNuts: itemsWithImages.filter((_, i) => allItems[i].category === 'seedsAndNuts'),
+          };
+
+          setSuggestions(suggestionsWithImages);
 
         } catch (err) {
           console.error('Failed to get suggestions:', err);
@@ -123,8 +130,8 @@ export default function DietPage() {
     try {
         const canvas = await html2canvas(printableRef.current, {
             useCORS: true,
-            scale: 2, // Higher scale for better quality
-            backgroundColor: null, // Use element's background
+            scale: 2,
+            backgroundColor: null,
         });
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF({
@@ -172,7 +179,7 @@ export default function DietPage() {
                 <Skeleton className="h-5 w-2/3" />
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[...Array(6)].map((_, i) => (
+                {[...Array(12)].map((_, i) => (
                     <div key={i} className="flex flex-col gap-4 p-4 rounded-lg border">
                         <Skeleton className="h-40 w-full rounded-md" />
                         <div className="space-y-2 flex-1">
@@ -223,7 +230,7 @@ export default function DietPage() {
             
             {Object.keys(categoryIcons).map(key => {
                 const category = key as SuggestionCategory;
-                const items = suggestions[category] as SuggestionItem[] | undefined;
+                const items = suggestions[category];
 
                 if (!items || items.length === 0) return null;
 

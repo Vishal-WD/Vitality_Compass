@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, ReactNode, useRef } from 'react';
-import { generateWorkoutSuggestions, WorkoutSuggestionsOutput, Exercise } from '@/ai/flows/generate-workout-suggestions';
+import { generateWorkoutSuggestions, WorkoutSuggestionsOutput, Exercise, DailyPlanSchema } from '@/ai/flows/generate-workout-suggestions';
 import { generateImage } from '@/ai/flows/generate-image';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -12,6 +12,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import type { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,38 +38,21 @@ const statusIcons: Record<string, ReactNode> = {
     "Healthy": <ShieldCheck className="h-5 w-5 text-green-500" />,
 }
 
-const WorkoutExerciseCard = ({ exercise }: { exercise: Exercise }) => {
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+interface ExerciseWithImage extends Exercise {
+    imageUrl: string;
+}
 
-    useEffect(() => {
-        const fetchImage = async () => {
-            try {
-                const result = await generateImage({ hint: exercise.imageHint, style: 'anime' });
-                setImageUrl(result.imageUrl);
-            } catch (error) {
-                console.error("Failed to generate image:", error);
-                setImageUrl(`https://placehold.co/100x100.png`);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchImage();
-    }, [exercise.imageHint]);
-
+const WorkoutExerciseCard = ({ exercise }: { exercise: ExerciseWithImage }) => {
     return (
         <div className="flex items-start gap-4 p-4 rounded-lg border">
-            {loading ? (
-                <Skeleton className="rounded-md object-cover aspect-square h-[80px] w-[80px]" />
-            ) : (
-                <Image
-                    src={imageUrl || `https://placehold.co/100x100.png`}
-                    alt={exercise.name}
-                    width={80}
-                    height={80}
-                    className="rounded-md object-cover aspect-square"
-                />
-            )}
+            <Image
+                src={exercise.imageUrl || `https://placehold.co/100x100.png`}
+                alt={exercise.name}
+                width={80}
+                height={80}
+                className="rounded-md object-cover aspect-square"
+                data-ai-hint={exercise.imageHint}
+            />
             <div className="flex-1">
                 <p className="font-semibold">{exercise.name}</p>
                 <p className="text-sm text-muted-foreground">{exercise.sets} &bull; {exercise.reps}</p>
@@ -77,11 +61,20 @@ const WorkoutExerciseCard = ({ exercise }: { exercise: Exercise }) => {
     );
 };
 
+interface DailyPlanWithImages extends Omit<z.infer<typeof DailyPlanSchema>, 'exercises'> {
+    exercises: ExerciseWithImage[];
+}
+
+interface SuggestionsWithImages extends Omit<WorkoutSuggestionsOutput, 'weeklyPlan'> {
+    weeklyPlan: DailyPlanWithImages[];
+}
+
+
 export default function WorkoutPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [suggestions, setSuggestions] = useState<WorkoutSuggestionsOutput | null>(null);
+  const [suggestions, setSuggestions] = useState<SuggestionsWithImages | null>(null);
   const [error, setError] = useState<string | null>(null);
   const printableRef = useRef<HTMLDivElement>(null);
 
@@ -112,8 +105,32 @@ export default function WorkoutPage() {
           
           const { createdAt, userId, ...plainData } = latestData;
           
-          const result = await generateWorkoutSuggestions(plainData);
-          setSuggestions(result);
+          const textResult = await generateWorkoutSuggestions(plainData);
+          
+          // Generate all images in parallel
+          const allExercises = textResult.weeklyPlan.flatMap(day => day.exercises);
+          const imagePromises = allExercises.map(async (exercise) => {
+             try {
+                const result = await generateImage({ hint: exercise.imageHint, style: 'anime' });
+                return { ...exercise, imageUrl: result.imageUrl };
+             } catch(e) {
+                console.error("Image generation failed for:", exercise.imageHint, e);
+                return { ...exercise, imageUrl: `https://placehold.co/100x100.png`};
+             }
+          });
+          
+          const exercisesWithImages = await Promise.all(imagePromises);
+          
+          let exerciseIndex = 0;
+          const weeklyPlanWithImages = textResult.weeklyPlan.map(day => ({
+              ...day,
+              exercises: day.exercises.map(() => exercisesWithImages[exerciseIndex++])
+          }));
+
+          setSuggestions({
+              ...textResult,
+              weeklyPlan: weeklyPlanWithImages,
+          });
 
         } catch (err) {
           console.error('Failed to get suggestions:', err);
@@ -134,8 +151,8 @@ export default function WorkoutPage() {
     try {
         const canvas = await html2canvas(printableRef.current, {
             useCORS: true,
-            scale: 2, // Higher scale for better quality
-            backgroundColor: null, // Use element's background
+            scale: 2, 
+            backgroundColor: null, 
         });
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF({
