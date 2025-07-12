@@ -39,7 +39,7 @@ export default function LandingPage() {
            </div>
         </section>
 
-        <section className="bg-white dark:bg-card py-20 lg:py-24">
+        <section className="bg-card py-20 lg:py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl font-bold text-center mb-12">Features to Guide You</h2>
             <div className="grid md:grid-cols-3 gap-8">
