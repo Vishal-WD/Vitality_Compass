@@ -13,6 +13,24 @@ interface ProgressChartProps {
   color: string;
 }
 
+// Custom Tooltip to improve performance and styling
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="p-2 text-xs bg-background/90 border rounded-md shadow-lg backdrop-blur-sm">
+        <p className="font-bold text-muted-foreground">{label}</p>
+        {payload.map((pld: any, index: number) => (
+          <div key={index} style={{ color: pld.color }}>
+            {`${pld.name}: ${pld.value}`}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+
 export function ProgressChart({ data, metric, label, color }: ProgressChartProps) {
 
   const isBloodPressure = metric === 'bloodPressure';
@@ -41,24 +59,21 @@ export function ProgressChart({ data, metric, label, color }: ProgressChartProps
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis domain={['auto', 'auto']} />
+          <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.5} />
+            <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis fontSize={12} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
             <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--background))',
-                borderColor: 'hsl(var(--border))',
-              }}
+              content={<CustomTooltip />}
             />
-            {isBloodPressure && <Legend />}
+            {isBloodPressure && <Legend wrapperStyle={{fontSize: "12px"}} />}
             {isBloodPressure ? (
               <>
-                <Line type="monotone" dataKey="systolic" name="Systolic" stroke="#E53935" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}/>
-                <Line type="monotone" dataKey="diastolic" name="Diastolic" stroke="#1E88E5" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}/>
+                <Line type="monotone" dataKey="systolic" name="Systolic" stroke="#E53935" strokeWidth={2} dot={false} activeDot={{ r: 6 }}/>
+                <Line type="monotone" dataKey="diastolic" name="Diastolic" stroke="#1E88E5" strokeWidth={2} dot={false} activeDot={{ r: 6 }}/>
               </>
             ) : (
-               <Line type="monotone" dataKey="value" name={label} stroke={color} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }}/>
+               <Line type="monotone" dataKey="value" name={label} stroke={color} strokeWidth={2} dot={false} activeDot={{ r: 6 }}/>
             )}
           </LineChart>
         </ResponsiveContainer>
