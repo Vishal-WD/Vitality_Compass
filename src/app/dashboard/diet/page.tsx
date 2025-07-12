@@ -3,7 +3,6 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 import { generateDietarySuggestions, GenerateDietarySuggestionsOutput, SuggestionItem } from '@/ai/flows/generate-dietary-suggestions';
-import { generateImage } from '@/ai/flows/generate-image';
 import { collection, query, where, orderBy, limit, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
@@ -14,52 +13,25 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Apple, Carrot, Fish, Shell, Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown, Info } from 'lucide-react';
-import Image from 'next/image';
 
 type SuggestionCategory = 'fruits' | 'vegetables' | 'proteins' | 'seedsAndNuts';
 
-interface SuggestionItemWithImage extends SuggestionItem {
-    imageUrl: string;
-}
-
-const DietSuggestionCard = ({ item }: { item: SuggestionItemWithImage }) => {
+const DietSuggestionCard = ({ item }: { item: SuggestionItem }) => {
     return (
-        <Card>
-            <CardContent className="p-0">
-                <Image
-                    src={item.imageUrl}
-                    alt={item.name}
-                    width={400}
-                    height={300}
-                    className="rounded-t-lg object-cover aspect-[4/3]"
-                    data-ai-hint={item.imageHint}
-                />
-                <div className="p-4">
-                    <p className="font-semibold">{item.name}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{item.reason}</p>
-                </div>
+        <Card className="flex flex-col">
+            <CardContent className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <div className="text-6xl mb-4">{item.emoji}</div>
+                <p className="font-semibold text-lg">{item.name}</p>
+                <p className="text-sm text-muted-foreground mt-2">{item.reason}</p>
             </CardContent>
         </Card>
     );
 };
 
-// Helper function to process promises in batches to avoid rate limiting
-async function processInBatches<T, R>(items: T[], processor: (item: T) => Promise<R>, batchSize: number): Promise<R[]> {
-    let results: R[] = [];
-    for (let i = 0; i < items.length; i += batchSize) {
-        const batchItems = items.slice(i, i + batchSize);
-        const batchPromises = batchItems.map(processor);
-        const batchResults = await Promise.all(batchPromises);
-        results = results.concat(batchResults);
-    }
-    return results;
-}
-
-
 export default function DietPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [suggestions, setSuggestions] = useState<(Omit<GenerateDietarySuggestionsOutput, SuggestionCategory> & Record<SuggestionCategory, SuggestionItemWithImage[]>) | null>(null);
+  const [suggestions, setSuggestions] = useState<GenerateDietarySuggestionsOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -113,36 +85,7 @@ export default function DietPage() {
             finalSuggestions = generatedResult;
           }
           
-          // 3. Generate images for the suggestions
-          const allItems: { item: SuggestionItem, category: SuggestionCategory }[] = [];
-          (Object.keys(finalSuggestions) as SuggestionCategory[]).forEach(key => {
-              if (Array.isArray(finalSuggestions[key])) {
-                  finalSuggestions[key].forEach(item => allItems.push({ item, category: key }));
-              }
-          });
-
-          const imageProcessor = async ({item}: {item: SuggestionItem}) => {
-             try {
-                const result = await generateImage({ hint: item.imageHint });
-                return { ...item, imageUrl: result.imageUrl };
-             } catch(e) {
-                console.error("Image generation failed for:", item.imageHint, e);
-                return { ...item, imageUrl: `https://placehold.co/400x300.png`};
-             }
-          };
-          
-          // Process in batches of 5 to avoid rate-limiting errors
-          const itemsWithImages = await processInBatches(allItems, imageProcessor, 5);
-
-          const suggestionsWithImages = {
-              ...finalSuggestions,
-              fruits: itemsWithImages.filter((_, i) => allItems[i].category === 'fruits'),
-              vegetables: itemsWithImages.filter((_, i) => allItems[i].category === 'vegetables'),
-              proteins: itemsWithImages.filter((_, i) => allItems[i].category === 'proteins'),
-              seedsAndNuts: itemsWithImages.filter((_, i) => allItems[i].category === 'seedsAndNuts'),
-          };
-
-          setSuggestions(suggestionsWithImages);
+          setSuggestions(finalSuggestions);
 
         } catch (err) {
           console.error('Failed to get suggestions:', err);
@@ -189,10 +132,11 @@ export default function DietPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(12)].map((_, i) => (
                     <div key={i} className="flex flex-col gap-4 p-4 rounded-lg border">
-                        <Skeleton className="h-40 w-full rounded-md" />
-                        <div className="space-y-2 flex-1">
-                            <Skeleton className="h-4 w-3/4" />
-                            <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-24 w-24 rounded-full mx-auto" />
+                        <div className="space-y-2 flex-1 text-center">
+                            <Skeleton className="h-5 w-3/4 mx-auto" />
+                            <Skeleton className="h-4 w-full mx-auto" />
+                            <Skeleton className="h-4 w-5/6 mx-auto" />
                         </div>
                     </div>
                 ))}
