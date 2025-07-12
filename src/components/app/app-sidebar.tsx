@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
+import { cn } from '@/lib/utils';
 
 interface AppSidebarProps {
   user: User;
