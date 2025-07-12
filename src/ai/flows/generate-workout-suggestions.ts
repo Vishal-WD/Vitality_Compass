@@ -73,7 +73,7 @@ Finally, create a 7-day workout plan. The plan should be tailored to address the
 - If blood pressure is high, recommend more consistent, moderate-intensity cardio.
 - If sugar levels are high, incorporate resistance training and HIIT to improve insulin sensitivity.
 - If cholesterol is high, focus on aerobic exercises.
-- If BMI is high, create a calorie-burning routine with a mix of cardio and strength.
+- If BMI is high (Overweight or Obese), create a calorie-burning routine with a mix of cardio and strength.
 - If fats are outside the normal range, adjust cardio and strength training accordingly.
 The plan must include a mix of cardio, strength training, and at least one rest day. For each day, provide a title, a short description, and a list of specific exercises with sets and reps. For each exercise, provide a simple one or two-word 'imageHint'.
 
