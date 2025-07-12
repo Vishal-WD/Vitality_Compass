@@ -91,9 +91,12 @@ export default function DietPage() {
           }
           
           const latestData = querySnapshot.docs[0].data() as HealthData;
+          
+          // Remove non-serializable fields before passing to the server function.
+          const { createdAt, userId, ...plainData } = latestData;
 
           // 2. Generate suggestions
-          const result = await generateDietarySuggestions(latestData);
+          const result = await generateDietarySuggestions(plainData);
           setSuggestions(result);
 
         } catch (err) {
