@@ -2,17 +2,14 @@
 'use client';
 
 import { useState, useEffect, ReactNode, useRef } from 'react';
-import { generateWorkoutSuggestions, WorkoutSuggestionsOutput, Exercise, DailyPlanSchema } from '@/ai/flows/generate-workout-suggestions';
-import { generateImage } from '@/ai/flows/generate-image';
+import { generateWorkoutSuggestions, WorkoutSuggestionsOutput, Exercise } from '@/ai/flows/generate-workout-suggestions';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
 import { HealthData } from '@/lib/types';
-import Image from 'next/image';
 import Link from 'next/link';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import type { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,21 +35,9 @@ const statusIcons: Record<string, ReactNode> = {
     "Healthy": <ShieldCheck className="h-5 w-5 text-green-500" />,
 }
 
-interface ExerciseWithImage extends Exercise {
-    imageUrl: string;
-}
-
-const WorkoutExerciseCard = ({ exercise }: { exercise: ExerciseWithImage }) => {
+const WorkoutExerciseCard = ({ exercise }: { exercise: Exercise }) => {
     return (
-        <div className="flex items-start gap-4 p-4 rounded-lg border">
-            <Image
-                src={exercise.imageUrl || `https://placehold.co/100x100.png`}
-                alt={exercise.name}
-                width={80}
-                height={80}
-                className="rounded-md object-cover aspect-square"
-                data-ai-hint={exercise.imageHint}
-            />
+        <div className="flex items-center gap-4 p-3 rounded-lg border">
             <div className="flex-1">
                 <p className="font-semibold">{exercise.name}</p>
                 <p className="text-sm text-muted-foreground">{exercise.sets} &bull; {exercise.reps}</p>
@@ -61,31 +46,12 @@ const WorkoutExerciseCard = ({ exercise }: { exercise: ExerciseWithImage }) => {
     );
 };
 
-interface DailyPlanWithImages extends Omit<z.infer<typeof DailyPlanSchema>, 'exercises'> {
-    exercises: ExerciseWithImage[];
-}
-
-interface SuggestionsWithImages extends Omit<WorkoutSuggestionsOutput, 'weeklyPlan'> {
-    weeklyPlan: DailyPlanWithImages[];
-}
-
-// Helper function to process promises in batches
-async function processInBatches<T, R>(items: T[], processor: (item: T) => Promise<R>, batchSize: number): Promise<R[]> {
-    let results: R[] = [];
-    for (let i = 0; i < items.length; i += batchSize) {
-        const batch = items.slice(i, i + batchSize);
-        const batchResults = await Promise.all(batch.map(processor));
-        results = results.concat(batchResults);
-    }
-    return results;
-}
-
 
 export default function WorkoutPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [suggestions, setSuggestions] = useState<SuggestionsWithImages | null>(null);
+  const [suggestions, setSuggestions] = useState<WorkoutSuggestionsOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const printableRef = useRef<HTMLDivElement>(null);
 
@@ -118,30 +84,7 @@ export default function WorkoutPage() {
           
           const textResult = await generateWorkoutSuggestions(plainData);
           
-          // Generate all images in batches to avoid rate limiting
-          const allExercises = textResult.weeklyPlan.flatMap(day => day.exercises);
-          const imageProcessor = async (exercise: Exercise) => {
-             try {
-                const result = await generateImage({ hint: exercise.imageHint, style: 'anime' });
-                return { ...exercise, imageUrl: result.imageUrl };
-             } catch(e) {
-                console.error("Image generation failed for:", exercise.imageHint, e);
-                return { ...exercise, imageUrl: `https://placehold.co/100x100.png`};
-             }
-          };
-          
-          const exercisesWithImages = await processInBatches(allExercises, imageProcessor, 5);
-          
-          let exerciseIndex = 0;
-          const weeklyPlanWithImages = textResult.weeklyPlan.map(day => ({
-              ...day,
-              exercises: day.exercises.map(() => exercisesWithImages[exerciseIndex++])
-          }));
-
-          setSuggestions({
-              ...textResult,
-              weeklyPlan: weeklyPlanWithImages,
-          });
+          setSuggestions(textResult);
 
         } catch (err) {
           console.error('Failed to get suggestions:', err);
@@ -242,7 +185,7 @@ export default function WorkoutPage() {
                           <AccordionContent className="pt-2">
                             <p className="text-muted-foreground mb-4">{dayPlan.description}</p>
                             {dayPlan.exercises.length > 0 ? (
-                              <div className="space-y-4">
+                              <div className="grid sm:grid-cols-2 gap-3">
                                   {dayPlan.exercises.map((exercise, i) => (
                                     <WorkoutExerciseCard key={i} exercise={exercise} />
                                   ))}

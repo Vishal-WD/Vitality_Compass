@@ -27,7 +27,6 @@ const ExerciseSchema = z.object({
   name: z.string().describe('The name of the exercise (e.g., "Push-ups", "Running", "Yoga").'),
   sets: z.string().describe('The number of sets (e.g., "3 sets").'),
   reps: z.string().describe('The number of repetitions or duration (e.g., "10-12 reps", "30 minutes").'),
-  imageHint: z.string().describe('A one or two-word hint for a relevant photorealistic image (e.g., "person doing pushups", "person running on treadmill", "person doing yoga").')
 });
 export type Exercise = z.infer<typeof ExerciseSchema>;
 
@@ -78,7 +77,7 @@ Finally, create a 7-day workout plan. The plan should be tailored to address the
 - If cholesterol is high, focus on aerobic exercises.
 - If BMI is high (Overweight or Obese), create a calorie-burning routine with a mix of cardio and strength.
 - If fats are outside the normal range, adjust cardio and strength training accordingly.
-The plan must include a mix of cardio, strength training, and at least one rest day. For each day, provide a title, a short description, and a list of specific exercises with sets and reps. For each exercise, provide a simple one or two-word 'imageHint' suitable for an AI image generator.
+The plan must include a mix of cardio, strength training, and at least one rest day. For each day, provide a title, a short description, and a list of specific exercises with sets and reps.
 
 User Metrics:
 - Age: {{age}} years
