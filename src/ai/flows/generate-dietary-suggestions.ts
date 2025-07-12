@@ -34,7 +34,7 @@ const SuggestionItemSchema = z.object({
 });
 
 const GenerateDietarySuggestionsOutputSchema = z.object({
-    summary: z.string().describe("A brief, encouraging one or two-sentence summary of the dietary advice."),
+    summary: z.string().describe("A brief, encouraging summary of the dietary advice. It MUST analyze the user's cholesterol, blood pressure, sugar, and fat levels and state if they are high, low, or normal before giving general advice."),
     fruits: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended fruits."),
     vegetables: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended vegetables."),
     proteins: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended lean proteins."),
@@ -57,7 +57,17 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateDietarySuggestionsOutputSchema},
   prompt: `You are a registered dietician. Based on the following health metrics, provide dietary suggestions to improve the user's health. 
   
-  Your response must be structured. Provide a brief summary, then list exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts. For each item, give its name, a short reason for its recommendation, and a simple image hint.
+  Your response must be structured. 
+  
+  First, write a summary that analyzes the key metrics. You MUST state whether the user's cholesterol, blood pressure, sugar levels, and fats are high, low, or normal. Use the following reference ranges:
+  - Blood Pressure: Normal is around 120/80. Anything significantly higher is high.
+  - Cholesterol: Normal is below 200 mg/dL.
+  - Sugar Levels (fasting): Normal is below 100 mg/dL.
+  - Fats (%): This varies by age and sex, but for an average adult, 20-30% is a general healthy range.
+  
+  After the analysis, provide a brief, encouraging summary.
+  
+  Then, list exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts. For each item, give its name, a short reason for its recommendation, and a simple image hint.
 
 Health Metrics:
 - Height: {{height}} cm
@@ -83,3 +93,4 @@ const generateDietarySuggestionsFlow = ai.defineFlow(
     return output!;
   }
 );
+
