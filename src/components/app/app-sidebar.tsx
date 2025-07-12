@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
+import { SheetTitle } from '../ui/sheet';
 
 interface AppSidebarProps {
   user: User;
@@ -58,6 +59,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 
   return (
     <Sidebar>
+       <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
       <SidebarHeader>
         <Logo />
       </SidebarHeader>
