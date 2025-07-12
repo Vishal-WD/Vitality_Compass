@@ -29,8 +29,8 @@ export type GenerateDietarySuggestionsInput = z.infer<
 >;
 
 const SuggestionItemSchema = z.object({
-  name: z.string().describe("Name of the food item."),
-  reason: z.string().describe("A brief, one-sentence reason why this food is suggested for the user."),
+  name: z.string().describe("Name of the food item or food category."),
+  reason: z.string().describe("A brief, one-sentence reason why this food is suggested or should be limited, specifically tied to the user's health metrics."),
 });
 export type SuggestionItem = z.infer<typeof SuggestionItemSchema>;
 
@@ -48,6 +48,7 @@ const GenerateDietarySuggestionsOutputSchema = z.object({
     vegetables: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended vegetables."),
     proteins: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended lean proteins."),
     seedsAndNuts: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended seeds and nuts."),
+    foodsToLimit: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 foods or food types to limit or avoid, with reasons tied to the user's metrics."),
 });
 
 export type GenerateDietarySuggestionsOutput = z.infer<
@@ -64,9 +65,9 @@ const prompt = ai.definePrompt({
   name: 'generateDietarySuggestionsPrompt',
   input: {schema: GenerateDietarySuggestionsInputSchema},
   output: {schema: GenerateDietarySuggestionsOutputSchema},
-  prompt: `You are a registered dietician. Based on the following health metrics, provide dietary suggestions to improve the user's health. 
+  prompt: `You are a registered dietician. Based on the following health metrics, provide highly specific and personalized dietary suggestions to improve the user's health. 
   
-  Your response must be structured. 
+  Your response must be structured and directly reference the user's data.
   
   First, provide a structured analysis for each of the following four metrics: Blood Pressure, Cholesterol, Sugar Levels, and Fats. For each metric, you MUST state if its status is 'High', 'Low', or 'Normal' and provide a short comment.
   Use the following reference ranges:
@@ -77,7 +78,9 @@ const prompt = ai.definePrompt({
   
   After the analysis, write a brief, encouraging summary of the overall advice.
   
-  Finally, list exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts. For each item, give its name and a short reason for its recommendation.
+  Next, provide food recommendations. The reasons for your suggestions MUST be specific to the user's metrics. For example, if cholesterol is high, recommend oatmeal because it contains soluble fiber. If blood pressure is high, recommend spinach because it's rich in potassium. List exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts.
+
+  Finally, create a list of exactly 3 'foodsToLimit'. These should be foods or food categories that are directly detrimental based on the user's metrics. For each, provide a specific reason (e.g., "Limit sugary drinks because your sugar levels are high").
 
 Health Metrics:
 - Height: {{height}} cm
@@ -90,7 +93,7 @@ Health Metrics:
 - Fats: {{fats}}%
 - Blood Points: {{bloodPoints}}
 
-Provide your structured dietary suggestions.`,
+Provide your structured and highly specific dietary suggestions.`,
 });
 
 const generateDietarySuggestionsFlow = ai.defineFlow(

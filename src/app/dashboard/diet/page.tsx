@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown, Info, Apple, Carrot, Beef, Leaf } from 'lucide-react';
+import { Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown, Info, Apple, Carrot, Beef, Leaf, Ban } from 'lucide-react';
 
 const DietSuggestionCard = ({ item }: { item: SuggestionItem }) => {
     return (
@@ -109,21 +109,22 @@ export default function DietPage() {
       "Normal": <ShieldCheck className="h-5 w-5 text-green-500" />,
   }
 
-  const suggestionCategories = ['fruits', 'vegetables', 'proteins', 'seedsAndNuts'];
-  
   const categoryIcons: Record<string, ReactNode> = {
     fruits: <Apple className="h-6 w-6 text-primary" />,
     vegetables: <Carrot className="h-6 w-6 text-primary" />,
     proteins: <Beef className="h-6 w-6 text-primary" />,
     seedsAndNuts: <Leaf className="h-6 w-6 text-primary" />,
+    foodsToLimit: <Ban className="h-6 w-6 text-destructive" />,
   };
+  
+  const suggestionCategories = ['fruits', 'vegetables', 'proteins', 'seedsAndNuts', 'foodsToLimit'];
 
 
   const renderContent = () => {
     if (loading) {
       return (
         <div className="space-y-6">
-            <div className="space-y-4 rounded-lg border p-6">
+            <div className="space-y-4 rounded-lg border p-4 md:p-6">
                 <Skeleton className="h-8 w-1/3 mb-4" />
                 <Skeleton className="h-6 w-full" />
                 <Skeleton className="h-6 w-full" />
@@ -180,7 +181,7 @@ export default function DietPage() {
             </div>
             
             {suggestionCategories.map(category => {
-                const items = suggestions[category as keyof typeof suggestions] as SuggestionItem[] | undefined;
+                const items = suggestions[category as keyof GenerateDietarySuggestionsOutput] as SuggestionItem[] | undefined;
 
                 if (!items || items.length === 0) return null;
                 const title = category.replace(/([A-Z])/g, ' $1');
