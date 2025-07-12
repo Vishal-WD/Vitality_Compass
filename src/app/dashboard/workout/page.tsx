@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, ReactNode, useRef } from 'react';
 import { generateWorkoutSuggestions, WorkoutSuggestionsOutput, Exercise } from '@/ai/flows/generate-workout-suggestions';
 import { generateImage } from '@/ai/flows/generate-image';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
@@ -10,11 +10,13 @@ import { useAuth } from '@/providers/auth-provider';
 import { HealthData } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShieldCheck, ShieldAlert, TrendingDown, HeartPulse, Heart, Droplets, Thermometer, Percent, Info } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, TrendingDown, HeartPulse, Heart, Droplets, Thermometer, Percent, Info, Download } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const metricAnalysisIcons: Record<string, ReactNode> = {
@@ -78,8 +80,11 @@ const WorkoutExerciseCard = ({ exercise }: { exercise: Exercise }) => {
 export default function WorkoutPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [suggestions, setSuggestions] = useState<WorkoutSuggestionsOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const printableRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     if (user) {
@@ -123,6 +128,30 @@ export default function WorkoutPage() {
     }
   }, [user]);
 
+  const handleDownload = async () => {
+    if (!printableRef.current) return;
+    setDownloading(true);
+    try {
+        const canvas = await html2canvas(printableRef.current, {
+            useCORS: true,
+            scale: 2, // Higher scale for better quality
+            backgroundColor: null, // Use element's background
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'px',
+            format: [canvas.width, canvas.height],
+        });
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.save('VitalityCompass-WorkoutPlan.pdf');
+    } catch(err) {
+        console.error("Failed to generate PDF:", err);
+    } finally {
+        setDownloading(false);
+    }
+  };
+
   const renderContent = () => {
       if (loading) {
           return (
@@ -150,9 +179,9 @@ export default function WorkoutPage() {
 
       if (suggestions) {
           return (
-              <div className="space-y-6">
+              <div className="space-y-6" ref={printableRef}>
                    {suggestions.analysis && (
-                     <div className="space-y-4 rounded-lg border p-4">
+                     <div className="space-y-4 rounded-lg border p-4 bg-card">
                        <h3 className="font-semibold text-lg">Analysis Summary</h3>
                        <ul className="space-y-3">
                            {suggestions.analysis?.map(item => (
@@ -213,11 +242,17 @@ export default function WorkoutPage() {
       </div>
       
       <Card className="min-h-full">
-        <CardHeader>
-          <CardTitle>Your Personalized Workout</CardTitle>
-          <CardDescription>
-            Here is the 7-day workout plan from our AI personal trainer, based on your latest metrics from the dashboard.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between">
+          <div>
+            <CardTitle>Your Personalized Workout</CardTitle>
+            <CardDescription>
+              Here is the 7-day workout plan from our AI personal trainer, based on your latest metrics.
+            </CardDescription>
+          </div>
+           <Button variant="outline" onClick={handleDownload} disabled={loading || downloading || !suggestions}>
+              <Download className="mr-2 h-4 w-4" />
+              {downloading ? 'Downloading...' : 'Download'}
+           </Button>
         </CardHeader>
         <CardContent>
            {renderContent()}
