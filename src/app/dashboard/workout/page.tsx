@@ -1,39 +1,19 @@
 'use client';
 
 import { useState, useEffect, ReactNode } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { generateWorkoutSuggestions, WorkoutSuggestionsInput, WorkoutSuggestionsOutput } from '@/ai/flows/generate-workout-suggestions';
+import { generateWorkoutSuggestions, WorkoutSuggestionsOutput } from '@/ai/flows/generate-workout-suggestions';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
-import { HealthData, healthDataSchema as baseSchema } from '@/lib/types';
+import { HealthData } from '@/lib/types';
 import Image from 'next/image';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, ShieldCheck, ShieldAlert, TrendingDown, HeartPulse, Heart, Droplets, Thermometer, Percent } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, TrendingDown, HeartPulse, Heart, Droplets, Thermometer, Percent, Info } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { ScrollArea } from '@/components/ui/scroll-area';
-
-const formSchema = baseSchema.pick({
-    height: true,
-    weight: true,
-    age: true,
-    bloodPressure: true,
-    cholesterol: true,
-    sugarLevels: true,
-    fats: true,
-    bloodPoints: true,
-});
-
-// We only need a subset for the AI, BMI is calculated from height and weight.
-const workoutInputSchema = baseSchema;
-
 
 const metricAnalysisIcons: Record<string, ReactNode> = {
     "BMI": <HeartPulse className="h-5 w-5 text-muted-foreground" />,
@@ -55,123 +35,78 @@ const statusIcons: Record<string, ReactNode> = {
 
 export default function WorkoutPage() {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<WorkoutSuggestionsOutput | null>(null);
-  const [isFetchingData, setIsFetchingData] = useState(true);
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-  });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      const fetchLatestData = async () => {
-        setIsFetchingData(true);
-        const q = query(
-          collection(db, 'healthData'),
-          where('userId', '==', user.uid),
-          orderBy('createdAt', 'desc'),
-          limit(1)
-        );
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
+      const fetchAndGenerate = async () => {
+        setLoading(true);
+        setError(null);
+        setSuggestions(null);
+
+        try {
+          const q = query(
+            collection(db, 'healthData'),
+            where('userId', '==', user.uid),
+            orderBy('createdAt', 'desc'),
+            limit(1)
+          );
+          const querySnapshot = await getDocs(q);
+
+          if (querySnapshot.empty) {
+            setError("No health data found. Please add your data on the dashboard page first.");
+            setLoading(false);
+            return;
+          }
+          
           const latestData = querySnapshot.docs[0].data() as HealthData;
-          form.reset(latestData);
+          
+          const result = await generateWorkoutSuggestions(latestData);
+          setSuggestions(result);
+
+        } catch (err) {
+          console.error('Failed to get suggestions:', err);
+          setError("An error occurred while generating your workout plan. Please try again later.");
+        } finally {
+            setLoading(false);
         }
-        setIsFetchingData(false);
       };
-      fetchLatestData();
+      fetchAndGenerate();
     } else {
-        setIsFetchingData(false);
+        setLoading(false);
     }
-  }, [user, form]);
+  }, [user]);
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setLoading(true);
-    setSuggestions(null);
-    try {
-      const bmi = parseFloat((values.weight / ((values.height / 100) ** 2)).toFixed(2));
-      const validatedInput = workoutInputSchema.parse({ ...values, bmi: isNaN(bmi) ? 0 : bmi, });
-      const result = await generateWorkoutSuggestions(validatedInput);
-      setSuggestions(result);
-    } catch (error) {
-      console.error('Failed to get suggestions:', error);
-       if (error instanceof z.ZodError) {
-        console.error("Zod validation error:", error.errors);
+  const renderContent = () => {
+      if (loading) {
+          return (
+             <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          )
       }
-    }
-    setLoading(false);
-  }
+      
+      if (error) {
+          return (
+            <Card className="text-center py-12">
+              <Info className="mx-auto h-12 w-12 text-destructive" />
+              <h3 className="text-xl font-semibold mt-4">Unable to Generate Plan</h3>
+              <p className="text-muted-foreground mt-2 max-w-md mx-auto">{error}</p>
+              <Button asChild className="mt-6">
+                <Link href="/dashboard">Go to Dashboard</Link>
+              </Button>
+            </Card>
+          )
+      }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">AI Workout Plans</h1>
-        <p className="text-muted-foreground">Get weekly workout plans tailored to your complete health profile.</p>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-1 lg:sticky top-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Health Metrics</CardTitle>
-              <CardDescription>
-                We've pre-filled your latest data. Adjust if needed.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isFetchingData ? (
-                  <div className="space-y-4">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                  </div>
-              ) : (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                   <ScrollArea className="h-96 pr-6">
-                      <div className="space-y-4 py-4">
-                          <FormField control={form.control} name="height" render={({ field }) => (<FormItem><FormLabel>Height (cm)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={form.control} name="weight" render={({ field }) => (<FormItem><FormLabel>Weight (kg)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={form.control} name="age" render={({ field }) => (<FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={form.control} name="bloodPressure" render={({ field }) => (<FormItem><FormLabel>Blood Pressure</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={form.control} name="cholesterol" render={({ field }) => (<FormItem><FormLabel>Cholesterol</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={form.control} name="sugarLevels" render={({ field }) => (<FormItem><FormLabel>Sugar Levels</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={form.control} name="fats" render={({ field }) => (<FormItem><FormLabel>Fats (%)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                          <FormField control={form.control} name="bloodPoints" render={({ field }) => (<FormItem><FormLabel>Blood Points</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                      </div>
-                  </ScrollArea>
-                  <Button type="submit" className="w-full mt-4" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {loading ? 'Generating...' : 'Generate Workout Plan'}
-                  </Button>
-                </form>
-              </Form>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-2">
-          <Card className="min-h-full">
-            <CardHeader>
-              <CardTitle>Your Personalized Workout</CardTitle>
-              <CardDescription>
-                Here is the 7-day workout plan from our AI personal trainer.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading && (
-                <div className="space-y-4">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-              )}
-              
-              {suggestions ? (
-                <div className="space-y-6">
+      if (suggestions) {
+          return (
+              <div className="space-y-6">
                    {suggestions.analysis && (
                      <div className="space-y-4 rounded-lg border p-4">
                        <h3 className="font-semibold text-lg">Analysis Summary</h3>
@@ -233,13 +168,30 @@ export default function WorkoutPage() {
                     </Accordion>
                   )}
                 </div>
-              ) : (
-                 !loading && <p className="text-center text-muted-foreground pt-10">Your workout plan will appear here.</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+          )
+      }
+      
+      return <p className="text-center text-muted-foreground pt-10">Your workout plan will appear here.</p>
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">AI Workout Plans</h1>
+        <p className="text-muted-foreground">Weekly workout plans tailored to your complete health profile, generated automatically.</p>
       </div>
+      
+      <Card className="min-h-full">
+        <CardHeader>
+          <CardTitle>Your Personalized Workout</CardTitle>
+          <CardDescription>
+            Here is the 7-day workout plan from our AI personal trainer, based on your latest metrics from the dashboard.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+           {renderContent()}
+        </CardContent>
+      </Card>
     </div>
   );
 }
