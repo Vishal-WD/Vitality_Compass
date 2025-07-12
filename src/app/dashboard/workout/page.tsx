@@ -2,7 +2,8 @@
 'use client';
 
 import { useState, useEffect, ReactNode } from 'react';
-import { generateWorkoutSuggestions, WorkoutSuggestionsOutput } from '@/ai/flows/generate-workout-suggestions';
+import { generateWorkoutSuggestions, WorkoutSuggestionsOutput, Exercise } from '@/ai/flows/generate-workout-suggestions';
+import { generateImage } from '@/ai/flows/generate-image';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
@@ -34,6 +35,46 @@ const statusIcons: Record<string, ReactNode> = {
     "Healthy": <ShieldCheck className="h-5 w-5 text-green-500" />,
 }
 
+const WorkoutExerciseCard = ({ exercise }: { exercise: Exercise }) => {
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchImage = async () => {
+            try {
+                const result = await generateImage({ hint: exercise.imageHint });
+                setImageUrl(result.imageUrl);
+            } catch (error) {
+                console.error("Failed to generate image:", error);
+                setImageUrl(`https://placehold.co/100x100.png`);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchImage();
+    }, [exercise.imageHint]);
+
+    return (
+        <div className="flex items-start gap-4 p-4 rounded-lg border">
+            {loading ? (
+                <Skeleton className="rounded-md object-cover aspect-square h-[80px] w-[80px]" />
+            ) : (
+                <Image
+                    src={imageUrl || `https://placehold.co/100x100.png`}
+                    alt={exercise.name}
+                    width={80}
+                    height={80}
+                    className="rounded-md object-cover aspect-square"
+                />
+            )}
+            <div className="flex-1">
+                <p className="font-semibold">{exercise.name}</p>
+                <p className="text-sm text-muted-foreground">{exercise.sets} &bull; {exercise.reps}</p>
+            </div>
+        </div>
+    );
+};
+
 export default function WorkoutPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -64,7 +105,6 @@ export default function WorkoutPage() {
           
           const latestData = querySnapshot.docs[0].data() as HealthData;
           
-          // Convert to a plain object before sending to the server function
           const { createdAt, ...plainData } = latestData;
           
           const result = await generateWorkoutSuggestions(plainData);
@@ -147,20 +187,7 @@ export default function WorkoutPage() {
                             {dayPlan.exercises.length > 0 ? (
                               <div className="space-y-4">
                                   {dayPlan.exercises.map((exercise, i) => (
-                                    <div key={i} className="flex items-start gap-4 p-4 rounded-lg border">
-                                      <Image 
-                                        src={`https://placehold.co/100x100.png`}
-                                        data-ai-hint={exercise.imageHint}
-                                        alt={exercise.name}
-                                        width={80}
-                                        height={80}
-                                        className="rounded-md object-cover aspect-square"
-                                      />
-                                      <div className="flex-1">
-                                        <p className="font-semibold">{exercise.name}</p>
-                                        <p className="text-sm text-muted-foreground">{exercise.sets} &bull; {exercise.reps}</p>
-                                      </div>
-                                    </div>
+                                    <WorkoutExerciseCard key={i} exercise={exercise} />
                                   ))}
                               </div>
                             ) : (

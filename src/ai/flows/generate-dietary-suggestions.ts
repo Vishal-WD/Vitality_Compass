@@ -1,4 +1,3 @@
-// use server'
 'use server';
 
 /**
@@ -31,8 +30,10 @@ export type GenerateDietarySuggestionsInput = z.infer<
 const SuggestionItemSchema = z.object({
   name: z.string().describe("Name of the food item."),
   reason: z.string().describe("A brief, one-sentence reason why this food is suggested for the user."),
-  imageHint: z.string().describe("A one or two-word hint for a relevant image (e.g., 'apple', 'spinach', 'chia seeds').")
+  imageHint: z.string().describe("A one or two-word hint for a relevant image (e.g., 'avocado', 'grilled chicken breast', 'chia seeds').")
 });
+export type SuggestionItem = z.infer<typeof SuggestionItemSchema>;
+
 
 const AnalysisItemSchema = z.object({
     metric: z.enum(["Blood Pressure", "Cholesterol", "Sugar Levels", "Fats"]),
@@ -76,7 +77,7 @@ const prompt = ai.definePrompt({
   
   After the analysis, write a brief, encouraging summary of the overall advice.
   
-  Finally, list exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts. For each item, give its name, a short reason for its recommendation, and a simple image hint.
+  Finally, list exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts. For each item, give its name, a short reason for its recommendation, and a simple, photorealistic image hint.
 
 Health Metrics:
 - Height: {{height}} cm

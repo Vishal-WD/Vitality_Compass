@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, ReactNode } from 'react';
-import { generateDietarySuggestions, GenerateDietarySuggestionsOutput } from '@/ai/flows/generate-dietary-suggestions';
+import { generateDietarySuggestions, GenerateDietarySuggestionsOutput, SuggestionItem } from '@/ai/flows/generate-dietary-suggestions';
+import { generateImage } from '@/ai/flows/generate-image';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
@@ -15,6 +16,50 @@ import { Apple, Carrot, Fish, Shell, Heart, Droplets, Thermometer, Percent, Shie
 import Image from 'next/image';
 
 type SuggestionCategory = 'fruits' | 'vegetables' | 'proteins' | 'seedsAndNuts';
+
+const DietSuggestionCard = ({ item }: { item: SuggestionItem }) => {
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchImage = async () => {
+            try {
+                const result = await generateImage({ hint: item.imageHint });
+                setImageUrl(result.imageUrl);
+            } catch (error) {
+                console.error("Failed to generate image:", error);
+                // Fallback to placeholder if generation fails
+                setImageUrl(`https://placehold.co/400x300.png`);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchImage();
+    }, [item.imageHint]);
+
+    return (
+        <Card>
+            <CardContent className="p-0">
+                {loading ? (
+                    <Skeleton className="h-full w-full rounded-t-lg aspect-[4/3]" />
+                ) : (
+                    <Image
+                        src={imageUrl || `https://placehold.co/400x300.png`}
+                        alt={item.name}
+                        width={400}
+                        height={300}
+                        className="rounded-t-lg object-cover aspect-[4/3]"
+                    />
+                )}
+                <div className="p-4">
+                    <p className="font-semibold">{item.name}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{item.reason}</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
 
 export default function DietPage() {
   const { user } = useAuth();
@@ -145,6 +190,10 @@ export default function DietPage() {
             
             {Object.keys(categoryIcons).map(key => {
                 const category = key as SuggestionCategory;
+                const items = suggestions[category] as SuggestionItem[] | undefined;
+
+                if (!items || items.length === 0) return null;
+
                 return (
                 <div key={category}>
                     <div className="flex items-center gap-3 mb-4">
@@ -152,23 +201,8 @@ export default function DietPage() {
                         <h3 className="text-xl font-semibold capitalize">{category.replace(/([A-Z])/g, ' $1')}</h3>
                     </div>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(suggestions[category] as any)?.map((item: any, index: number) => (
-                        <Card key={index}>
-                            <CardContent className="p-0">
-                                <Image
-                                    src={`https://placehold.co/400x300.png`}
-                                    data-ai-hint={item.imageHint}
-                                    alt={item.name}
-                                    width={400}
-                                    height={300}
-                                    className="rounded-t-lg object-cover aspect-[4/3]"
-                                />
-                                <div className="p-4">
-                                    <p className="font-semibold">{item.name}</p>
-                                    <p className="text-sm text-muted-foreground mt-1">{item.reason}</p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    {items.map((item, index) => (
+                        <DietSuggestionCard key={`${category}-${index}`} item={item} />
                     ))}
                     </div>
                 </div>
