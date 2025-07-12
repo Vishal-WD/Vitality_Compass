@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/providers/auth-provider';
@@ -34,6 +35,12 @@ export default function ProfilePage() {
         setLoading(false);
         return;
     }
+    
+    if (!user.email) {
+        toast({ variant: "destructive", title: "No Email Associated", description: "You must have an email associated with your account to change the password." });
+        setLoading(false);
+        return;
+    }
 
     if(newPassword.length < 6) {
         toast({ variant: "destructive", title: "Password too short", description: "Password must be at least 6 characters." });
@@ -41,7 +48,7 @@ export default function ProfilePage() {
         return;
     }
 
-    const credential = EmailAuthProvider.credential(user.email!, currentPassword);
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
 
     try {
         await reauthenticateWithCredential(user, credential);
@@ -74,30 +81,32 @@ export default function ProfilePage() {
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={user.email || ''} disabled />
+            <Input id="email" type="email" value={user.email || 'Anonymous User'} disabled />
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>Enter your current and new password to make a change.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-             <div>
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
-            </div>
-            <div>
-                <Label htmlFor="new-password">New Password</Label>
-                <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
-            </div>
-            <Button type="submit" disabled={loading}>{loading ? "Updating..." : "Update Password"}</Button>
-          </form>
-        </CardContent>
-      </Card>
+      {user.email && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Change Password</CardTitle>
+            <CardDescription>Enter your current and new password to make a change.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div>
+                  <Label htmlFor="current-password">Current Password</Label>
+                  <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+              </div>
+              <div>
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+              </div>
+              <Button type="submit" disabled={loading}>{loading ? "Updating..." : "Update Password"}</Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
