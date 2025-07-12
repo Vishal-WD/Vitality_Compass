@@ -8,6 +8,10 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
 import { HealthData } from '@/lib/types';
 import Link from 'next/link';
+import { Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,17 +22,18 @@ type SuggestionCategory = 'fruits' | 'vegetables' | 'proteins' | 'seedsAndNuts';
 
 const DietSuggestionCard = ({ item }: { item: SuggestionItem }) => {
     return (
-        <Card className="flex flex-col">
-            <CardContent className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                <div className="text-6xl mb-4">{item.emoji}</div>
-                <p className="font-semibold text-lg">{item.name}</p>
-                <p className="text-sm text-muted-foreground mt-2">{item.reason}</p>
+        <Card className="flex flex-col border-2 border-primary/20 bg-primary/5 hover:shadow-lg transition-shadow duration-300">
+            <CardContent className="flex-1 flex flex-col items-center justify-start p-6 text-center">
+                <div className="text-7xl mb-4 p-4 bg-white rounded-full shadow-inner">{item.emoji}</div>
+                <p className="font-bold text-xl text-primary/90">{item.name}</p>
+                <p className="text-sm text-muted-foreground mt-2 flex-grow">{item.reason}</p>
             </CardContent>
         </Card>
     );
 };
 
 export default function DietPage() {
+  'use client';
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<GenerateDietarySuggestionsOutput | null>(null);
@@ -71,7 +76,8 @@ export default function DietPage() {
             finalSuggestions = suggestionSnap.data().suggestionData;
           } else {
             // Generate new suggestions and cache them
-            const { createdAt, userId, id, ...plainData } = latestHealthData;
+            const { id, userId, createdAt, ...plainData } = latestHealthData;
+
             const generatedResult = await generateDietarySuggestions(plainData);
             
             await setDoc(suggestionRef, {
@@ -98,19 +104,55 @@ export default function DietPage() {
         setLoading(false);
     }
   }, [user]);
+  
+  const handleDownload = () => {
+    const input = document.getElementById('suggestions-content');
+    if (!input) return;
+
+    html2canvas(input, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: window.getComputedStyle(document.body).backgroundColor,
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const ratio = canvasWidth / canvasHeight;
+      const width = pdfWidth;
+      const height = width / ratio;
+
+      let position = 0;
+      let heightLeft = height;
+
+      pdf.addImage(imgData, 'PNG', 0, position, width, height);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - height;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, width, height);
+        heightLeft -= pdfHeight;
+      }
+      
+      pdf.save(`diet-suggestions-${new Date().toISOString().slice(0, 10)}.pdf`);
+    });
+  };
 
   const categoryIcons: Record<string, ReactNode> = {
-    fruits: <Apple className="w-6 h-6 text-primary" />,
-    vegetables: <Carrot className="w-6 h-6 text-primary" />,
-    proteins: <Fish className="w-6 h-6 text-primary" />,
-    seedsAndNuts: <Shell className="w-6 h-6 text-primary" />,
+    fruits: <Apple className="w-8 h-8 text-primary" />,
+    vegetables: <Carrot className="w-8 h-8 text-primary" />,
+    proteins: <Fish className="w-8 h-8 text-primary" />,
+    seedsAndNuts: <Shell className="w-8 h-8 text-primary" />,
   };
 
   const metricAnalysisIcons: Record<string, ReactNode> = {
-      "Blood Pressure": <Heart className="h-5 w-5 text-muted-foreground" />,
-      "Cholesterol": <Droplets className="h-5 w-5 text-muted-foreground" />,
-      "Sugar Levels": <Thermometer className="h-5 w-5 text-muted-foreground" />,
-      "Fats": <Percent className="h-5 w-5 text-muted-foreground" />,
+      "Blood Pressure": <Heart className="h-6 w-6 text-red-500" />,
+      "Cholesterol": <Droplets className="h-6 w-6 text-yellow-500" />,
+      "Sugar Levels": <Thermometer className="h-6 w-6 text-blue-500" />,
+      "Fats": <Percent className="h-6 w-6 text-purple-500" />,
   }
 
   const statusIcons: Record<string, ReactNode> = {
@@ -123,20 +165,20 @@ export default function DietPage() {
     if (loading) {
       return (
         <div className="space-y-6">
-            <div className="space-y-4 rounded-lg border p-4">
-                <Skeleton className="h-6 w-1/3 mb-4" />
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-2/3" />
+            <div className="space-y-4 rounded-lg border p-6">
+                <Skeleton className="h-8 w-1/3 mb-4" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-2/3" />
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(12)].map((_, i) => (
-                    <div key={i} className="flex flex-col gap-4 p-4 rounded-lg border">
-                        <Skeleton className="h-24 w-24 rounded-full mx-auto" />
-                        <div className="space-y-2 flex-1 text-center">
-                            <Skeleton className="h-5 w-3/4 mx-auto" />
-                            <Skeleton className="h-4 w-full mx-auto" />
-                            <Skeleton className="h-4 w-5/6 mx-auto" />
+                    <div key={i} className="flex flex-col gap-4 p-6 rounded-lg border">
+                        <Skeleton className="h-28 w-28 rounded-full mx-auto" />
+                        <div className="space-y-3 flex-1 text-center">
+                            <Skeleton className="h-6 w-3/4 mx-auto" />
+                            <Skeleton className="h-5 w-full mx-auto" />
+                            <Skeleton className="h-5 w-5/6 mx-auto" />
                         </div>
                     </div>
                 ))}
@@ -160,24 +202,24 @@ export default function DietPage() {
 
     if (suggestions) {
       return (
-        <div className="space-y-6">
-            <div className="space-y-4 rounded-lg border p-4 bg-card">
-               <h3 className="font-semibold text-lg">Analysis Summary</h3>
-               <ul className="space-y-3">
+        <div className="space-y-8" id="suggestions-content">
+            <div className="space-y-4 rounded-xl border p-6 bg-card shadow-sm">
+               <h3 className="font-bold text-2xl text-primary/90">Analysis Summary</h3>
+               <ul className="grid md:grid-cols-2 gap-x-8 gap-y-4">
                    {suggestions.analysis?.map(item => (
-                       <li key={item.metric} className="flex items-start gap-3">
-                            <div className="flex items-center gap-2 pt-1">
+                       <li key={item.metric} className="flex items-center gap-4">
+                            <div className="p-2 bg-primary/10 rounded-full">
                                {metricAnalysisIcons[item.metric]}
-                               {statusIcons[item.status]}
                             </div>
-                           <div>
-                               <span className="font-semibold">{item.metric}: {item.status}</span>
+                           <div className="flex-1">
+                               <span className="font-semibold text-lg">{item.metric}: <span className="font-bold">{item.status}</span></span>
                                <p className="text-sm text-muted-foreground">{item.comment}</p>
                            </div>
+                           {statusIcons[item.status]}
                        </li>
                    ))}
                </ul>
-               <p className="text-sm text-muted-foreground pt-2">{suggestions.summary}</p>
+               <p className="text-sm text-muted-foreground pt-4 leading-relaxed">{suggestions.summary}</p>
             </div>
             
             {Object.keys(categoryIcons).map(key => {
@@ -188,11 +230,11 @@ export default function DietPage() {
 
                 return (
                 <div key={category}>
-                    <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-4 mb-4">
                         {categoryIcons[category]}
-                        <h3 className="text-xl font-semibold capitalize">{category.replace(/([A-Z])/g, ' $1')}</h3>
+                        <h3 className="text-2xl font-bold capitalize text-primary/90">{category.replace(/([A-Z])/g, ' $1')}</h3>
                     </div>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {items.map((item, index) => (
                         <DietSuggestionCard key={`${category}-${index}`} item={item} />
                     ))}
@@ -214,13 +256,17 @@ export default function DietPage() {
       </div>
 
        <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row justify-between items-start">
                 <div>
                   <CardTitle>Your Personalized Suggestions</CardTitle>
                   <CardDescription>
                   Here are the dietary recommendations from our AI assistant, based on your latest metrics.
                   </CardDescription>
                 </div>
+                <Button variant="outline" onClick={handleDownload} disabled={loading || !suggestions || !!error}>
+                    <Download className="mr-2 h-4 w-4"/>
+                    Download
+                </Button>
             </CardHeader>
             <CardContent>
                 {renderContent()}
