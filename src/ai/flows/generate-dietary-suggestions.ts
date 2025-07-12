@@ -65,35 +65,44 @@ const prompt = ai.definePrompt({
   name: 'generateDietarySuggestionsPrompt',
   input: {schema: GenerateDietarySuggestionsInputSchema},
   output: {schema: GenerateDietarySuggestionsOutputSchema},
-  prompt: `You are a registered dietician. Based on the following health metrics, provide highly specific and personalized dietary suggestions to improve the user's health. 
+  prompt: `You are a highly analytical and meticulous registered dietician. Your task is to generate a dietary plan that is hyper-personalized and avoids all generic advice. Every recommendation must be directly and clearly justified by the user's specific health metrics, even minor deviations from the norm.
+
+  **Core Instructions:**
+  1.  **Analyze Holistically:** Do not look at metrics in isolation. Consider how they interplay. For example, how does high cholesterol combined with high blood pressure influence your recommendations?
+  2.  **Justify Everything:** For every single food item you suggest or advise against, you MUST provide a "reason" that explicitly links back to one or more of the user's metrics. Generic reasons like "it's healthy" are forbidden. The reason must be specific, e.g., "Limit processed cheese because its high sodium content can negatively impact your high blood pressure."
+  3.  **Be Precise:** Use the provided reference ranges to determine the status of each metric.
+
+  **Output Structure:**
   
-  Your response must be structured and directly reference the user's data.
-  
-  First, provide a structured analysis for each of the following four metrics: Blood Pressure, Cholesterol, Sugar Levels, and Fats. For each metric, you MUST state if its status is 'High', 'Low', or 'Normal' and provide a short comment.
-  Use the following reference ranges:
-  - Blood Pressure: Normal is around 120/80. Anything significantly higher is high.
-  - Cholesterol: Normal is below 200 mg/dL.
+  **Part 1: Metric Analysis**
+  Provide a structured analysis for each of the four key metrics: Blood Pressure, Cholesterol, Sugar Levels, and Fats. For each, state if its status is 'High', 'Low', or 'Normal' based on these ranges:
+  - Blood Pressure: Normal is around 120/80 mmHg.
+  - Cholesterol: Normal total cholesterol is below 200 mg/dL.
   - Sugar Levels (fasting): Normal is below 100 mg/dL.
-  - Fats (%): This varies by age and sex, but for an average adult, 20-30% is a general healthy range.
-  
-  After the analysis, write a brief, encouraging summary of the overall advice.
-  
-  Next, provide food recommendations. The reasons for your suggestions MUST be specific to the user's metrics. For example, if cholesterol is high, recommend oatmeal because it contains soluble fiber. If blood pressure is high, recommend spinach because it's rich in potassium. List exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts.
+  - Fats (%): For an average adult, 20-30% is a general healthy range.
+  Provide a brief, interpretive comment for each.
 
-  Finally, create a list of exactly 3 'foodsToLimit'. These should be foods or food categories that are directly detrimental based on the user's metrics. For each, provide a specific reason (e.g., "Limit sugary drinks because your sugar levels are high").
+  **Part 2: Encouraging Summary**
+  Write a brief, 2-3 sentence summary of the dietary approach based on your analysis.
 
-Health Metrics:
-- Height: {{height}} cm
-- Weight: {{weight}} kg
-- Age: {{age}} years
-- BMI: {{bmi}}
-- Blood Pressure: {{bloodPressure}}
-- Cholesterol: {{cholesterol}} mg/dL
-- Sugar Levels: {{sugarLevels}} mg/dL
-- Fats: {{fats}}%
-- Blood Points: {{bloodPoints}}
+  **Part 3: Specific Food Recommendations**
+  Provide exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts. The 'reason' for each must be scientifically sound and tied to the user's data.
 
-Provide your structured and highly specific dietary suggestions.`,
+  **Part 4: Specific Foods to Limit**
+  Create a list of exactly 3 foods or food types to limit. The 'reason' for each must be a direct consequence of the user's metrics.
+
+  **User's Health Metrics:**
+  - Height: {{height}} cm
+  - Weight: {{weight}} kg
+  - Age: {{age}} years
+  - BMI: {{bmi}}
+  - Blood Pressure: {{bloodPressure}}
+  - Cholesterol: {{cholesterol}} mg/dL
+  - Sugar Levels: {{sugarLevels}} mg/dL
+  - Fats: {{fats}}%
+  - Blood Points: {{bloodPoints}}
+
+  Now, generate the hyper-personalized and strictly justified dietary plan.`,
 });
 
 const generateDietarySuggestionsFlow = ai.defineFlow(
