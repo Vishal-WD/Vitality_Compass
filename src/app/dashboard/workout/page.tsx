@@ -20,6 +20,14 @@ import { Loader2, ShieldCheck, ShieldAlert, TrendingDown, HeartPulse } from 'luc
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formSchema = z.object({
+  age: z.coerce.number().positive("Age is required."),
+  weight: z.coerce.number().positive("Weight is required."),
+  bmi: z.coerce.number().positive("BMI is required."),
+  height: z.coerce.number().positive("Height is required.")
+});
+
+// We only need a subset for the AI, BMI is calculated from height and weight.
+const workoutInputSchema = z.object({
   age: z.coerce.number().positive(),
   weight: z.coerce.number().positive(),
   bmi: z.coerce.number().positive(),
@@ -38,12 +46,13 @@ export default function WorkoutPage() {
   const [suggestions, setSuggestions] = useState<WorkoutSuggestionsOutput | null>(null);
   const [isFetchingData, setIsFetchingData] = useState(true);
 
-  const form = useForm<WorkoutSuggestionsInput>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       age: 0,
       weight: 0,
-      bmi: 0
+      bmi: 0,
+      height: 0,
     }
   });
 
@@ -64,6 +73,7 @@ export default function WorkoutPage() {
             age: latestData.age,
             weight: latestData.weight,
             bmi: latestData.bmi,
+            height: latestData.height,
           });
         }
         setIsFetchingData(false);
@@ -73,15 +83,33 @@ export default function WorkoutPage() {
         setIsFetchingData(false);
     }
   }, [user, form]);
+  
+  // Watch height and weight to recalculate BMI
+  const height = form.watch('height');
+  const weight = form.watch('weight');
 
-  async function onSubmit(values: WorkoutSuggestionsInput) {
+  useEffect(() => {
+    if (height > 0 && weight > 0) {
+      const bmi = parseFloat((weight / ((height / 100) ** 2)).toFixed(2));
+      if (!isNaN(bmi)) {
+        form.setValue('bmi', bmi, { shouldValidate: true });
+      }
+    }
+  }, [height, weight, form]);
+
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     setSuggestions(null);
     try {
-      const result = await generateWorkoutSuggestions(values);
+      const validatedInput = workoutInputSchema.parse(values);
+      const result = await generateWorkoutSuggestions(validatedInput);
       setSuggestions(result);
     } catch (error) {
       console.error('Failed to get suggestions:', error);
+       if (error instanceof z.ZodError) {
+        console.error("Zod validation error:", error.errors);
+      }
     }
     setLoading(false);
   }
@@ -113,8 +141,9 @@ export default function WorkoutPage() {
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField control={form.control} name="age" render={({ field }) => (<FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="height" render={({ field }) => (<FormItem><FormLabel>Height (cm)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="weight" render={({ field }) => (<FormItem><FormLabel>Weight (kg)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="bmi" render={({ field }) => (<FormItem><FormLabel>BMI</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={form.control} name="bmi" render={({ field }) => (<FormItem><FormLabel>BMI (auto-calculated)</FormLabel><FormControl><Input type="number" {...field} readOnly className="bg-muted" /></FormControl><FormMessage /></FormItem>)} />
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {loading ? 'Generating...' : 'Generate Workout Plan'}

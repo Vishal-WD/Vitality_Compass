@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import { healthDataSchema } from '@/lib/types';
+import { healthDataSchema as baseHealthDataSchema } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
+
+// Remove bmi from the form validation, it will be calculated
+const healthDataSchema = baseHealthDataSchema.omit({ bmi: true });
 
 type HealthDataFormValues = z.infer<typeof healthDataSchema>;
 
