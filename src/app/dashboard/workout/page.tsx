@@ -69,6 +69,17 @@ interface SuggestionsWithImages extends Omit<WorkoutSuggestionsOutput, 'weeklyPl
     weeklyPlan: DailyPlanWithImages[];
 }
 
+// Helper function to process promises in batches
+async function processInBatches<T, R>(items: T[], processor: (item: T) => Promise<R>, batchSize: number): Promise<R[]> {
+    let results: R[] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(processor));
+        results = results.concat(batchResults);
+    }
+    return results;
+}
+
 
 export default function WorkoutPage() {
   const { user } = useAuth();
@@ -107,9 +118,9 @@ export default function WorkoutPage() {
           
           const textResult = await generateWorkoutSuggestions(plainData);
           
-          // Generate all images in parallel
+          // Generate all images in batches to avoid rate limiting
           const allExercises = textResult.weeklyPlan.flatMap(day => day.exercises);
-          const imagePromises = allExercises.map(async (exercise) => {
+          const imageProcessor = async (exercise: Exercise) => {
              try {
                 const result = await generateImage({ hint: exercise.imageHint, style: 'anime' });
                 return { ...exercise, imageUrl: result.imageUrl };
@@ -117,9 +128,9 @@ export default function WorkoutPage() {
                 console.error("Image generation failed for:", exercise.imageHint, e);
                 return { ...exercise, imageUrl: `https://placehold.co/100x100.png`};
              }
-          });
+          };
           
-          const exercisesWithImages = await Promise.all(imagePromises);
+          const exercisesWithImages = await processInBatches(allExercises, imageProcessor, 5);
           
           let exerciseIndex = 0;
           const weeklyPlanWithImages = textResult.weeklyPlan.map(day => ({

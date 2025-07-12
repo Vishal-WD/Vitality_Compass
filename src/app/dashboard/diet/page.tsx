@@ -45,6 +45,17 @@ const DietSuggestionCard = ({ item }: { item: SuggestionItemWithImage }) => {
     );
 };
 
+// Helper function to process promises in batches
+async function processInBatches<T, R>(items: T[], processor: (item: T) => Promise<R>, batchSize: number): Promise<R[]> {
+    let results: R[] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(processor));
+        results = results.concat(batchResults);
+    }
+    return results;
+}
+
 
 export default function DietPage() {
   const { user } = useAuth();
@@ -82,7 +93,7 @@ export default function DietPage() {
 
           const textResult = await generateDietarySuggestions(plainData);
           
-          // Generate all images in parallel
+          // Generate all images in batches to avoid rate limiting
           const allItems: { item: SuggestionItem, category: SuggestionCategory }[] = [];
           (Object.keys(textResult) as SuggestionCategory[]).forEach(key => {
               if (Array.isArray(textResult[key])) {
@@ -90,7 +101,7 @@ export default function DietPage() {
               }
           });
 
-          const imagePromises = allItems.map(async ({item}) => {
+          const imageProcessor = async ({item}: {item: SuggestionItem}) => {
              try {
                 const result = await generateImage({ hint: item.imageHint });
                 return { ...item, imageUrl: result.imageUrl };
@@ -98,9 +109,9 @@ export default function DietPage() {
                 console.error("Image generation failed for:", item.imageHint, e);
                 return { ...item, imageUrl: `https://placehold.co/400x300.png`};
              }
-          });
+          };
           
-          const itemsWithImages = await Promise.all(imagePromises);
+          const itemsWithImages = await processInBatches(allItems, imageProcessor, 5);
 
           const suggestionsWithImages = {
               ...textResult,
