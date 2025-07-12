@@ -33,8 +33,15 @@ const SuggestionItemSchema = z.object({
   imageHint: z.string().describe("A one or two-word hint for a relevant image (e.g., 'apple', 'spinach', 'chia seeds').")
 });
 
+const AnalysisItemSchema = z.object({
+    metric: z.enum(["Blood Pressure", "Cholesterol", "Sugar Levels", "Fats"]),
+    status: z.enum(["High", "Low", "Normal"]),
+    comment: z.string().describe("A brief, one-sentence comment on this specific metric.")
+});
+
 const GenerateDietarySuggestionsOutputSchema = z.object({
-    summary: z.string().describe("A brief, encouraging summary of the dietary advice. It MUST analyze the user's cholesterol, blood pressure, sugar, and fat levels and state if they are high, low, or normal before giving general advice."),
+    analysis: z.array(AnalysisItemSchema).length(4).describe("An array of 4 analysis points, one for each key metric: Blood Pressure, Cholesterol, Sugar Levels, and Fats. It MUST cover all four."),
+    summary: z.string().describe("A brief, encouraging summary (2-3 sentences) of the overall dietary advice based on the analysis."),
     fruits: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended fruits."),
     vegetables: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended vegetables."),
     proteins: z.array(SuggestionItemSchema).min(3).describe("A list of exactly 3 recommended lean proteins."),
@@ -59,15 +66,16 @@ const prompt = ai.definePrompt({
   
   Your response must be structured. 
   
-  First, write a summary that analyzes the key metrics. You MUST state whether the user's cholesterol, blood pressure, sugar levels, and fats are high, low, or normal. Use the following reference ranges:
+  First, provide a structured analysis for each of the following four metrics: Blood Pressure, Cholesterol, Sugar Levels, and Fats. For each metric, you MUST state if its status is 'High', 'Low', or 'Normal' and provide a short comment.
+  Use the following reference ranges:
   - Blood Pressure: Normal is around 120/80. Anything significantly higher is high.
   - Cholesterol: Normal is below 200 mg/dL.
   - Sugar Levels (fasting): Normal is below 100 mg/dL.
   - Fats (%): This varies by age and sex, but for an average adult, 20-30% is a general healthy range.
   
-  After the analysis, provide a brief, encouraging summary.
+  After the analysis, write a brief, encouraging summary of the overall advice.
   
-  Then, list exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts. For each item, give its name, a short reason for its recommendation, and a simple image hint.
+  Finally, list exactly 3 items for each category: fruits, vegetables, proteins, and seeds/nuts. For each item, give its name, a short reason for its recommendation, and a simple image hint.
 
 Health Metrics:
 - Height: {{height}} cm
@@ -93,4 +101,3 @@ const generateDietarySuggestionsFlow = ai.defineFlow(
     return output!;
   }
 );
-

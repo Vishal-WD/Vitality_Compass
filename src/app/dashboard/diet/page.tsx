@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { generateDietarySuggestions, GenerateDietarySuggestionsInput, GenerateDietarySuggestionsOutput } from '@/ai/flows/generate-dietary-suggestions';
@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Apple, Carrot, Fish, Shell } from 'lucide-react';
+import { Loader2, Apple, Carrot, Fish, Shell, Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 
@@ -29,12 +29,25 @@ const formSchema = baseSchema.pick({
     bloodPoints: true,
 });
 
-const categoryIcons = {
+const categoryIcons: Record<string, ReactNode> = {
   fruits: <Apple className="w-6 h-6 text-primary" />,
   vegetables: <Carrot className="w-6 h-6 text-primary" />,
   proteins: <Fish className="w-6 h-6 text-primary" />,
   seedsAndNuts: <Shell className="w-6 h-6 text-primary" />,
 };
+
+const metricAnalysisIcons: Record<string, ReactNode> = {
+    "Blood Pressure": <Heart className="h-5 w-5 text-muted-foreground" />,
+    "Cholesterol": <Droplets className="h-5 w-5 text-muted-foreground" />,
+    "Sugar Levels": <Thermometer className="h-5 w-5 text-muted-foreground" />,
+    "Fats": <Percent className="h-5 w-5 text-muted-foreground" />,
+}
+
+const statusIcons: Record<string, ReactNode> = {
+    "High": <ShieldAlert className="h-5 w-5 text-red-500" />,
+    "Low": <TrendingDown className="h-5 w-5 text-blue-500" />,
+    "Normal": <ShieldCheck className="h-5 w-5 text-green-500" />,
+}
 
 type SuggestionCategory = 'fruits' | 'vegetables' | 'proteins' | 'seedsAndNuts';
 
@@ -154,7 +167,25 @@ export default function DietPage() {
                     )}
                     {suggestions ? (
                         <div className="space-y-6">
-                            <p className="text-muted-foreground">{suggestions.summary}</p>
+                            <div className="space-y-4 rounded-lg border p-4">
+                               <h3 className="font-semibold text-lg">Analysis Summary</h3>
+                               <ul className="space-y-3">
+                                   {suggestions.analysis?.map(item => (
+                                       <li key={item.metric} className="flex items-start gap-3">
+                                            <div className="flex items-center gap-2 pt-1">
+                                               {metricAnalysisIcons[item.metric]}
+                                               {statusIcons[item.status]}
+                                            </div>
+                                           <div>
+                                               <span className="font-semibold">{item.metric}: {item.status}</span>
+                                               <p className="text-sm text-muted-foreground">{item.comment}</p>
+                                           </div>
+                                       </li>
+                                   ))}
+                               </ul>
+                               <p className="text-sm text-muted-foreground pt-2">{suggestions.summary}</p>
+                            </div>
+                            
                             {Object.keys(categoryIcons).map(key => {
                                 const category = key as SuggestionCategory;
                                 return (
