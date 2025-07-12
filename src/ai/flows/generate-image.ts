@@ -11,6 +11,7 @@ import { z } from 'zod';
 
 const GenerateImageInputSchema = z.object({
     hint: z.string().describe("A short text hint to generate an image from (e.g., 'avocado', 'person running')."),
+    style: z.enum(['photorealistic', 'anime']).optional().default('photorealistic').describe("The style of the image to generate."),
 });
 
 export type GenerateImageInput = z.infer<typeof GenerateImageInputSchema>;
@@ -33,9 +34,13 @@ const generateImageFlow = ai.defineFlow(
         outputSchema: GenerateImageOutputSchema,
     },
     async (input) => {
+        const stylePrompt = input.style === 'anime' 
+            ? `a dynamic, high-quality anime-style illustration of ${input.hint}, clean vibrant colors, digital painting`
+            : `a high-quality, photorealistic image of ${input.hint}, on a clean, light gray background`;
+
         const { media } = await ai.generate({
             model: 'googleai/gemini-2.0-flash-preview-image-generation',
-            prompt: `a high-quality, photorealistic image of ${input.hint}, on a clean, light gray background`,
+            prompt: stylePrompt,
             config: {
                 responseModalities: ['TEXT', 'IMAGE'],
             },

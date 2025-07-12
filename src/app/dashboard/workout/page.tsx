@@ -42,7 +42,7 @@ const WorkoutExerciseCard = ({ exercise }: { exercise: Exercise }) => {
     useEffect(() => {
         const fetchImage = async () => {
             try {
-                const result = await generateImage({ hint: exercise.imageHint });
+                const result = await generateImage({ hint: exercise.imageHint, style: 'anime' });
                 setImageUrl(result.imageUrl);
             } catch (error) {
                 console.error("Failed to generate image:", error);
@@ -105,7 +105,7 @@ export default function WorkoutPage() {
           
           const latestData = querySnapshot.docs[0].data() as HealthData;
           
-          const { createdAt, ...plainData } = latestData;
+          const { createdAt, userId, ...plainData } = latestData;
           
           const result = await generateWorkoutSuggestions(plainData);
           setSuggestions(result);
