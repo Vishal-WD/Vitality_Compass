@@ -11,15 +11,12 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Apple, Carrot, Fish, Shell, Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown, Info } from 'lucide-react';
-
-type SuggestionCategory = 'fruits' | 'vegetables' | 'proteins' | 'seedsAndNuts';
+import { Heart, Droplets, Thermometer, Percent, ShieldCheck, ShieldAlert, TrendingDown, Info } from 'lucide-react';
 
 const DietSuggestionCard = ({ item }: { item: SuggestionItem }) => {
     return (
         <Card className="flex flex-col border-2 border-primary/20 bg-primary/5 hover:shadow-lg transition-shadow duration-300">
             <CardContent className="flex-1 flex flex-col items-center justify-start p-6 text-center">
-                <div className="text-7xl mb-4 p-4 bg-white rounded-full shadow-inner">{item.emoji}</div>
                 <p className="font-bold text-xl text-primary/90">{item.name}</p>
                 <p className="text-sm text-muted-foreground mt-2 flex-grow">{item.reason}</p>
             </CardContent>
@@ -99,13 +96,6 @@ export default function DietPage() {
     }
   }, [user]);
 
-  const categoryIcons: Record<SuggestionCategory, ReactNode> = {
-    fruits: <Apple className="w-8 h-8 text-primary" />,
-    vegetables: <Carrot className="w-8 h-8 text-primary" />,
-    proteins: <Fish className="w-8 h-8 text-primary" />,
-    seedsAndNuts: <Shell className="w-8 h-8 text-primary" />,
-  };
-
   const metricAnalysisIcons: Record<string, ReactNode> = {
       "Blood Pressure": <Heart className="h-6 w-6 text-red-500" />,
       "Cholesterol": <Droplets className="h-6 w-6 text-yellow-500" />,
@@ -119,7 +109,7 @@ export default function DietPage() {
       "Normal": <ShieldCheck className="h-5 w-5 text-green-500" />,
   }
   
-  const suggestionCategories: SuggestionCategory[] = ['fruits', 'vegetables', 'proteins', 'seedsAndNuts'];
+  const suggestionCategories: (keyof GenerateDietarySuggestionsOutput)[] = ['fruits', 'vegetables', 'proteins', 'seedsAndNuts'];
 
 
   const renderContent = () => {
@@ -135,9 +125,8 @@ export default function DietPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(12)].map((_, i) => (
                     <div key={i} className="flex flex-col gap-4 p-6 rounded-lg border">
-                        <Skeleton className="h-28 w-28 rounded-full mx-auto" />
+                        <Skeleton className="h-12 w-3/4 mx-auto" />
                         <div className="space-y-3 flex-1 text-center">
-                            <Skeleton className="h-6 w-3/4 mx-auto" />
                             <Skeleton className="h-5 w-full mx-auto" />
                             <Skeleton className="h-5 w-5/6 mx-auto" />
                         </div>
@@ -184,14 +173,13 @@ export default function DietPage() {
             </div>
             
             {suggestionCategories.map(category => {
-                const items = suggestions[category];
+                const items = suggestions[category] as SuggestionItem[] | undefined;
 
                 if (!items || items.length === 0) return null;
 
                 return (
                 <div key={category}>
                     <div className="flex items-center gap-4 mb-4">
-                        {categoryIcons[category]}
                         <h3 className="text-2xl font-bold capitalize text-primary/90">{category.replace(/([A-Z])/g, ' $1')}</h3>
                     </div>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
