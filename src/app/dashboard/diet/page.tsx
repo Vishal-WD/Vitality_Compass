@@ -43,12 +43,13 @@ const DietSuggestionCard = ({ item }: { item: SuggestionItemWithImage }) => {
     );
 };
 
-// Helper function to process promises in batches
+// Helper function to process promises in batches to avoid rate limiting
 async function processInBatches<T, R>(items: T[], processor: (item: T) => Promise<R>, batchSize: number): Promise<R[]> {
     let results: R[] = [];
     for (let i = 0; i < items.length; i += batchSize) {
-        const batch = items.slice(i, i + batchSize);
-        const batchResults = await Promise.all(batch.map(processor));
+        const batchItems = items.slice(i, i + batchSize);
+        const batchPromises = batchItems.map(processor);
+        const batchResults = await Promise.all(batchPromises);
         results = results.concat(batchResults);
     }
     return results;
@@ -130,6 +131,7 @@ export default function DietPage() {
              }
           };
           
+          // Process in batches of 5 to avoid rate-limiting errors
           const itemsWithImages = await processInBatches(allItems, imageProcessor, 5);
 
           const suggestionsWithImages = {
