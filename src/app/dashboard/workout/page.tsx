@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldCheck, ShieldAlert, TrendingDown, HeartPulse } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formSchema = z.object({
@@ -24,6 +24,13 @@ const formSchema = z.object({
   weight: z.coerce.number().positive(),
   bmi: z.coerce.number().positive(),
 });
+
+const statusIcons: Record<string, ReactNode> = {
+    "Overweight": <ShieldAlert className="h-5 w-5 text-red-500" />,
+    "Obese": <ShieldAlert className="h-5 w-5 text-red-500" />,
+    "Underweight": <TrendingDown className="h-5 w-5 text-blue-500" />,
+    "Healthy": <ShieldCheck className="h-5 w-5 text-green-500" />,
+}
 
 export default function WorkoutPage() {
   const { user } = useAuth();
@@ -86,8 +93,8 @@ export default function WorkoutPage() {
         <p className="text-muted-foreground">Get weekly workout plans tailored to your age, weight, and BMI.</p>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
+      <div className="grid lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-1 lg:sticky top-6">
           <Card>
             <CardHeader>
               <CardTitle>Your Metrics</CardTitle>
@@ -130,57 +137,74 @@ export default function WorkoutPage() {
             <CardContent>
               {loading && (
                 <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
-                  ))}
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
                 </div>
               )}
-              {suggestions?.weeklyPlan ? (
-                <Accordion type="single" collapsible className="w-full" defaultValue="item-0">
-                  {suggestions.weeklyPlan.map((dayPlan, index) => (
-                    <AccordionItem value={`item-${index}`} key={index}>
-                      <AccordionTrigger className="text-lg font-semibold hover:no-underline">
-                        <div className="flex flex-col text-left">
-                           <span>{dayPlan.day}</span>
-                           <span className="text-sm font-normal text-primary">{dayPlan.title}</span>
+              
+              {suggestions ? (
+                <div className="space-y-6">
+                   {suggestions.analysis && (
+                     <div className="space-y-4 rounded-lg border p-4">
+                         <h3 className="font-semibold text-lg">Analysis Summary</h3>
+                         <div className="flex items-start gap-3">
+                            <div className="flex items-center gap-2 pt-1">
+                                <HeartPulse className="h-5 w-5 text-muted-foreground" />
+                                {statusIcons[suggestions.analysis.bmiStatus]}
+                            </div>
+                            <div>
+                                <span className="font-semibold">BMI Status: {suggestions.analysis.bmiStatus}</span>
+                                <p className="text-sm text-muted-foreground">{suggestions.analysis.comment}</p>
+                            </div>
                         </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pt-2">
-                         <p className="text-muted-foreground mb-4">{dayPlan.description}</p>
-                         {dayPlan.exercises.length > 0 ? (
-                           <div className="space-y-4">
-                              {dayPlan.exercises.map((exercise, i) => (
-                                <div key={i} className="flex items-start gap-4 p-4 rounded-lg border">
-                                  <Image 
-                                    src={`https://placehold.co/100x100.png`}
-                                    data-ai-hint={exercise.imageHint}
-                                    alt={exercise.name}
-                                    width={80}
-                                    height={80}
-                                    className="rounded-md object-cover aspect-square"
-                                  />
-                                  <div className="flex-1">
-                                    <p className="font-semibold">{exercise.name}</p>
-                                    <p className="text-sm text-muted-foreground">{exercise.sets} &bull; {exercise.reps}</p>
-                                  </div>
-                                </div>
-                              ))}
-                           </div>
-                         ) : (
-                           <p className="text-center text-muted-foreground py-4">This is a rest day. Enjoy!</p>
-                         )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
+                     </div>
+                   )}
+
+                  {suggestions.weeklyPlan && (
+                    <Accordion type="single" collapsible className="w-full" defaultValue="item-0">
+                      {suggestions.weeklyPlan.map((dayPlan, index) => (
+                        <AccordionItem value={`item-${index}`} key={index}>
+                          <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                            <div className="flex flex-col text-left">
+                              <span>{dayPlan.day}</span>
+                              <span className="text-sm font-normal text-primary">{dayPlan.title}</span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pt-2">
+                            <p className="text-muted-foreground mb-4">{dayPlan.description}</p>
+                            {dayPlan.exercises.length > 0 ? (
+                              <div className="space-y-4">
+                                  {dayPlan.exercises.map((exercise, i) => (
+                                    <div key={i} className="flex items-start gap-4 p-4 rounded-lg border">
+                                      <Image 
+                                        src={`https://placehold.co/100x100.png`}
+                                        data-ai-hint={exercise.imageHint}
+                                        alt={exercise.name}
+                                        width={80}
+                                        height={80}
+                                        className="rounded-md object-cover aspect-square"
+                                      />
+                                      <div className="flex-1">
+                                        <p className="font-semibold">{exercise.name}</p>
+                                        <p className="text-sm text-muted-foreground">{exercise.sets} &bull; {exercise.reps}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            ) : (
+                              <p className="text-center text-muted-foreground py-4">This is a rest day. Enjoy!</p>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  )}
+                </div>
               ) : (
                  !loading && <p className="text-center text-muted-foreground pt-10">Your workout plan will appear here.</p>
               )}
-               {!loading && !suggestions && !form.formState.isSubmitted && (
-                 <p className="text-center text-muted-foreground pt-10">
-                    Fill in your metrics and click &quot;Generate Workout Plan&quot; to get started.
-                 </p>
-               )}
             </CardContent>
           </Card>
         </div>

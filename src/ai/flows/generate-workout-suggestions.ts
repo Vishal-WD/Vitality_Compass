@@ -30,8 +30,14 @@ const DailyPlanSchema = z.object({
   })).describe("An array of exercises for the day. If it's a rest day, this array can be empty.")
 });
 
+const AnalysisSchema = z.object({
+  bmiStatus: z.enum(["Underweight", "Healthy", "Overweight", "Obese"]).describe("The user's BMI status."),
+  comment: z.string().describe("A brief, one-sentence comment about the user's BMI and what the plan focuses on.")
+});
+
 const WorkoutSuggestionsOutputSchema = z.object({
-  weeklyPlan: z.array(DailyPlanSchema).describe("A 7-day workout plan tailored to the user.")
+  analysis: AnalysisSchema.describe("An analysis of the user's BMI."),
+  weeklyPlan: z.array(DailyPlanSchema).length(7).describe("A 7-day workout plan tailored to the user.")
 });
 export type WorkoutSuggestionsOutput = z.infer<typeof WorkoutSuggestionsOutputSchema>;
 
@@ -45,7 +51,13 @@ const prompt = ai.definePrompt({
   name: 'workoutSuggestionsPrompt',
   input: {schema: WorkoutSuggestionsInputSchema},
   output: {schema: WorkoutSuggestionsOutputSchema},
-  prompt: `You are a world-class personal trainer. Generate a comprehensive 7-day workout plan based on the user's age, weight, and BMI.
+  prompt: `You are a world-class personal trainer. First, analyze the user's BMI and provide a status and a brief comment. Then, generate a comprehensive 7-day workout plan based on the user's age, weight, and BMI.
+
+BMI Reference Ranges:
+- Underweight: < 18.5
+- Healthy: 18.5 - 24.9
+- Overweight: 25.0 - 29.9
+- Obese: >= 30.0
 
 User Metrics:
 - Age: {{age}} years
